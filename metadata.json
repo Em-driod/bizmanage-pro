@@ -1,0 +1,5 @@
+{
+  "name": "BizManage Pro",
+  "description": "A modern business management platform for handling clients, transactions, payroll, and users with a robust JWT-based authentication system.",
+  "requestFramePermissions": []
+}
