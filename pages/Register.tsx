@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { User, UserRole } from '../types';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -29,11 +30,13 @@ const Register: React.FC = () => {
     };
 
     try {
-      const data = await apiRequest<{ _id: string, name: string, email: string, role: string, businessId: string, token: string }>('/users/register', {
+      const data = await apiRequest<User & { token: string }>('/users/register', {
         method: 'POST',
         body: payload,
       });
-      login(data, data.token);
+
+      const { token, ...user } = data;
+      login(user, token);
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Registration failed.');
