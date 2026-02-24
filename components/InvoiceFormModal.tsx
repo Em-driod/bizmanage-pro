@@ -181,7 +181,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                     <input
                                         type="number"
                                         placeholder="Unit Price"
-                                        value={item.unitPrice}
+                                        value={item.unitPrice === 0 ? '' : item.unitPrice}
                                         onChange={(e) => handleLineItemChange(index, 'unitPrice', e.target.value)}
                                         className="w-28 p-2 border border-slate-200 rounded-lg text-sm"
                                         step="0.01"
@@ -205,7 +205,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                             <label className="text-sm">Tax Rate (%):</label>
                             <input
                                 type="number"
-                                value={taxRate}
+                                value={taxRate === 0 ? '' : taxRate}
                                 onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
                                 className="w-20 p-1 border border-slate-200 rounded-lg text-sm text-right"
                                 min="0"

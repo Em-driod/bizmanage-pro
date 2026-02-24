@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
+import { usePrint } from '../context/PrintContext';
 import InvoiceFormModal from '../components/InvoiceFormModal';
 import ScanInvoiceModal from '../components/ScanInvoiceModal';
-import { ScannedInvoice } from '../types';
+import { ScannedInvoice, Client } from '../types';
 
 // Define the Invoice type according to the backend model
 interface Invoice {
     _id: string;
     invoiceNumber: string;
-    clientId: { _id: string; name: string };
+    clientId: { _id: string; name: string; email?: string; phone?: string };
     total: number;
+    subtotal: number;
+    tax: number;
+    lineItems: any[];
     status: 'draft' | 'sent' | 'paid' | 'overdue';
     dueDate: string;
     createdAt: string;
@@ -18,6 +22,7 @@ interface Invoice {
 
 const Invoices: React.FC = () => {
     const { formatCurrency } = useCurrency();
+    const { printReceipt } = usePrint();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -39,6 +44,30 @@ const Invoices: React.FC = () => {
     useEffect(() => {
         fetchInvoices();
     }, []);
+
+    const handleViewReceipt = async (invoiceId: string) => {
+        try {
+            const fullInvoice = await apiRequest<Invoice>(`/invoices/${invoiceId}`);
+            printReceipt({
+                invoice: {
+                    invoiceNumber: fullInvoice.invoiceNumber,
+                    lineItems: fullInvoice.lineItems.map(item => ({
+                        description: item.description,
+                        quantity: item.quantity,
+                        unitPrice: item.price || item.unitPrice,
+                        total: item.total
+                    })),
+                    subtotal: fullInvoice.subtotal,
+                    tax: fullInvoice.tax,
+                    total: fullInvoice.total,
+                    dueDate: fullInvoice.dueDate
+                },
+                client: fullInvoice.clientId as unknown as Client
+            });
+        } catch (err: any) {
+            alert('Failed to load receipt: ' + err.message);
+        }
+    };
 
     const getStatusChip = (status: Invoice['status']) => {
         const styles = {
@@ -114,7 +143,10 @@ const Invoices: React.FC = () => {
                                                 </td>
                                                 <td className="px-8 py-6">{getStatusChip(invoice.status)}</td>
                                                 <td className="px-8 py-6 text-right">
-                                                    <button className="w-9 h-9 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-300 hover:text-indigo-600 hover:border-indigo-100 shadow-sm transition-all opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0">
+                                                    <button
+                                                        onClick={() => handleViewReceipt(invoice._id)}
+                                                        className="w-9 h-9 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-300 hover:text-indigo-600 hover:border-indigo-100 shadow-sm transition-all opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
+                                                    >
                                                         <i className="fas fa-eye text-xs"></i>
                                                     </button>
                                                 </td>
@@ -151,7 +183,10 @@ const Invoices: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <button className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-600 active:bg-slate-50 transition-colors shadow-sm">
+                                        <button
+                                            onClick={() => handleViewReceipt(invoice._id)}
+                                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-600 active:bg-slate-50 transition-colors shadow-sm"
+                                        >
                                             <i className="fas fa-eye text-xs text-indigo-500"></i>
                                             View Details
                                         </button>
