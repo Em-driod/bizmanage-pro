@@ -59,3 +59,43 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 }
+
+export interface ParsedScanItem {
+  amount: number;
+  type: 'income' | 'expense' | 'unassigned'; // Added 'unassigned' for flexibility
+  description: string;
+  category: string;
+  status?: 'pending' | 'committed' | 'edited'; // Add status field, optional for now
+}
+
+export interface ScanResponse {
+  text: string;
+  transactions: ParsedScanItem[];
+}
+
+export interface ScannedInvoiceLineItem {
+  description: string;
+  quantity: number;
+  price: number;
+  total: number;
+}
+
+export interface ScannedInvoice {
+  invoiceNumber?: string;
+  total: number;
+  tax: number;
+  dueDate?: string;
+  lineItems: ScannedInvoiceLineItem[];
+}
+
+export interface IScannedTransaction {
+  _id: string;
+  businessId: string;
+  rawText: string;
+  originalFileName: string;
+  status: 'pending' | 'processed';
+  recordedBy: string;
+  createdAt: string;
+  updatedAt: string;
+  parsedDetails: ParsedScanItem[];
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../services/api';
-import { Client } from '../types';
+import { Client, ScannedInvoice } from '../types';
 import { useCurrency } from '../context/CurrencyContext';
 
 interface LineItem {
@@ -13,9 +13,10 @@ interface LineItem {
 interface InvoiceFormModalProps {
     onClose: () => void;
     onSave: () => void;
+    initialData?: ScannedInvoice | null;
 }
 
-const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave }) => {
+const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, initialData }) => {
     const { formatCurrency } = useCurrency();
     const [clients, setClients] = useState<Client[]>([]);
     const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -41,6 +42,27 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave }) 
         };
         fetchClients();
     }, []);
+
+    // Pre-fill form if initialData is provided (from AI scan)
+    useEffect(() => {
+        if (initialData) {
+            if (initialData.lineItems && initialData.lineItems.length > 0) {
+                const mappedItems: LineItem[] = initialData.lineItems.map(item => ({
+                    description: item.description,
+                    quantity: item.quantity,
+                    unitPrice: item.price,
+                    total: item.total || item.quantity * item.price,
+                }));
+                setLineItems(mappedItems);
+            }
+            if (initialData.dueDate) {
+                setDueDate(initialData.dueDate);
+            }
+            if (initialData.tax) {
+                setTaxRate(initialData.tax);
+            }
+        }
+    }, [initialData]);
 
     const handleLineItemChange = (index: number, field: keyof LineItem, value: any) => {
         const newLineItems = [...lineItems];

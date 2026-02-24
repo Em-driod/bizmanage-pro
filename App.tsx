@@ -2,8 +2,10 @@ import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CurrencyProvider } from './context/CurrencyContext';
+import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import ToastContainer from './components/ToastContainer';
 import { UserRole } from './types';
 
 // Pages
@@ -18,10 +20,11 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Reports from './pages/Reports';
 import Invoices from './pages/Invoices';
+import ScannedTransactions from './pages/ScannedTransactions';
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
-  
+
   return (
     <Routes>
       {/* Public Routes */}
@@ -34,11 +37,12 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
         <Route path="/clients" element={<Layout><Clients /></Layout>} />
         <Route path="/transactions" element={<Layout><Transactions /></Layout>} />
+        <Route path="/scanned-transactions" element={<Layout><ScannedTransactions /></Layout>} />
         <Route path="/payroll" element={<Layout><Payrolls /></Layout>} />
         <Route path="/reports" element={<Layout><Reports /></Layout>} />
         <Route path="/invoices" element={<Layout><Invoices /></Layout>} />
         <Route path="/business" element={<Layout><BusinessPage /></Layout>} />
-        
+
         {/* Admin Only */}
         <Route element={<ProtectedRoute requiredRole={UserRole.ADMIN} />}>
           <Route path="/users" element={<Layout><Users /></Layout>} />
@@ -54,11 +58,14 @@ const AppRoutes = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <CurrencyProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
-      </CurrencyProvider>
+      <NotificationProvider>
+        <CurrencyProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+          <ToastContainer />
+        </CurrencyProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 };

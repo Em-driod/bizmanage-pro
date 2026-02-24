@@ -76,6 +76,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     setIsNotificationsOpen(false);
   };
 
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      await apiRequest(`/notifications/${id}`, { method: 'DELETE' });
+      fetchNotifications();
+    } catch (error) {
+      console.error("Failed to delete notification", error);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -85,6 +94,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { label: 'Overview', path: '/dashboard', icon: 'fa-layer-group' },
     { label: 'Clients', path: '/clients', icon: 'fa-address-book' },
     { label: 'Finances', path: '/transactions', icon: 'fa-receipt' },
+    { label: 'Scanned', path: '/scanned-transactions', icon: 'fa-scanner' },
     { label: 'Personnel', path: '/payroll', icon: 'fa-user-tie' },
     { label: 'Reports', path: '/reports', icon: 'fa-chart-pie' },
     { label: 'Invoices', path: '/invoices', icon: 'fa-file-invoice' },
@@ -198,10 +208,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       <p className="text-center text-xs text-slate-400 p-8">No notifications yet.</p>
                     ) : (
                       notifications.map(notif => (
-                        <div key={notif._id} onClick={() => handleNotificationClick(notif)} className={`p-4 border-b border-slate-50 cursor-pointer ${notif.isRead ? 'opacity-60' : 'hover:bg-slate-50'}`}>
-                          <div className="flex items-start gap-3">
+                        <div key={notif._id} className={`p-4 border-b border-slate-50 ${notif.isRead ? 'opacity-60' : ''}`}>
+                          <div className="flex items-start gap-3 relative">
                             {!notif.isRead && <span className="w-2 h-2 mt-1.5 rounded-full bg-indigo-500"></span>}
-                            <p className={`text-xs ${notif.isRead ? 'text-slate-400' : 'text-slate-600 font-semibold'}`}>{notif.message}</p>
+                            <p onClick={() => handleNotificationClick(notif)} className={`flex-1 text-xs cursor-pointer ${notif.isRead ? 'text-slate-400' : 'text-slate-600 font-semibold'}`}>{notif.message}</p>
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteNotification(notif._id); }} className="text-red-400 hover:text-red-600 text-xs ml-2">
+                              <i className="fas fa-times"></i>
+                            </button>
                           </div>
                           <p className="text-[10px] text-slate-400 mt-1 ml-5">{new Date(notif.createdAt).toLocaleString()}</p>
                         </div>
