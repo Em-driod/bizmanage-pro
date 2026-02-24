@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 import CurrencySelector from './CurrencySelector';
 import { apiRequest } from '../services/api';
+import { usePrint } from '../context/PrintContext';
+import ReceiptPrint from './ReceiptPrint';
 
 interface Notification {
   _id: string;
@@ -15,6 +17,7 @@ interface Notification {
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, isAdmin } = useAuth();
+  const { printData } = usePrint();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -58,7 +61,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       console.error("Failed to mark notification as read", error);
     }
   };
-  
+
   const handleMarkAllAsRead = async () => {
     try {
       await apiRequest('/notifications/read-all', { method: 'PUT' });
@@ -108,7 +111,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="min-h-screen bg-[#FDFDFD] flex">
       {/* Mobile Toggle */}
-      <button 
+      <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         className="lg:hidden fixed top-6 right-6 z-50 bg-slate-900 text-white w-12 h-12 rounded-xl flex items-center justify-center"
       >
@@ -122,12 +125,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       `}>
         <div className="flex flex-col h-full">
           <div className="p-8">
-             <Link to="/" className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-slate-900 rounded flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 bg-white rotate-45"></div>
-                </div>
-                <span className="text-sm font-[800] tracking-tighter text-slate-900">BIZMANAGE</span>
-             </Link>
+            <Link to="/" className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-slate-900 rounded flex items-center justify-center">
+                <div className="w-2.5 h-2.5 bg-white rotate-45"></div>
+              </div>
+              <span className="text-sm font-[800] tracking-tighter text-slate-900">BIZMANAGE</span>
+            </Link>
           </div>
 
           <nav className="flex-1 px-4 space-y-1">
@@ -139,8 +142,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 onClick={() => setIsSidebarOpen(false)}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-xl transition-all
-                  ${location.pathname === item.path 
-                    ? 'bg-indigo-50 text-indigo-700 font-bold' 
+                  ${location.pathname === item.path
+                    ? 'bg-indigo-50 text-indigo-700 font-bold'
                     : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}
                 `}
               >
@@ -152,21 +155,21 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
           <div className="p-6">
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-               <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">
-                    {user?.name.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-900 truncate">{user?.name}</p>
-                    <p className="text-[9px] font-extrabold text-slate-400 uppercase truncate">{user?.role}</p>
-                  </div>
-               </div>
-               <button 
-                 onClick={handleLogout}
-                 className="w-full py-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors"
-               >
-                 LOGOUT
-               </button>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">
+                  {user?.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-900 truncate">{user?.name}</p>
+                  <p className="text-[9px] font-extrabold text-slate-400 uppercase truncate">{user?.role}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full py-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+              >
+                LOGOUT
+              </button>
             </div>
           </div>
         </div>
@@ -175,19 +178,19 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Main Container */}
       <main className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         <header className="px-10 py-6 flex items-center justify-between border-b border-slate-50 bg-white/50 backdrop-blur-sm sticky top-0 z-30">
-           <div>
-             <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
-               {navItems.find(i => i.path === location.pathname)?.label || 'Overview'}
-             </h2>
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Session: {user?.businessId}</p>
-           </div>
-           
-           <div className="flex items-center gap-4">
-             <CurrencySelector />
-             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100">
-               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-               <span className="text-[10px] font-bold uppercase tracking-wider">Live System</span>
-             </div>
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
+              {navItems.find(i => i.path === location.pathname)?.label || 'Overview'}
+            </h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Session: {user?.businessId}</p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <CurrencySelector />
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">Live System</span>
+            </div>
             <div className="relative" ref={notificationRef}>
               <button onClick={() => setIsNotificationsOpen(prev => !prev)} className="w-10 h-10 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all relative">
                 <i className="far fa-bell text-sm"></i>
@@ -224,13 +227,21 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </div>
               )}
             </div>
-           </div>
+          </div>
         </header>
 
         <div className="flex-1 px-10 py-10 max-w-7xl mx-auto w-full">
           {children}
         </div>
       </main>
+
+      {printData && (
+        <ReceiptPrint
+          invoice={printData.invoice}
+          client={printData.client}
+          businessName={user?.businessName || 'OPSFLOW BUSINESS'}
+        />
+      )}
     </div>
   );
 };

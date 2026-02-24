@@ -10,6 +10,7 @@ export interface User {
   email: string;
   role: UserRole;
   businessId: string;
+  businessName?: string;
 }
 
 export interface Business {

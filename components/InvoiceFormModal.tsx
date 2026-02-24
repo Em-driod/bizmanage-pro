@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../services/api';
 import { Client, ScannedInvoice } from '../types';
 import { useCurrency } from '../context/CurrencyContext';
+import { usePrint } from '../context/PrintContext';
 
 interface LineItem {
     description: string;
@@ -18,6 +19,7 @@ interface InvoiceFormModalProps {
 
 const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, initialData }) => {
     const { formatCurrency } = useCurrency();
+    const { printReceipt } = usePrint();
     const [clients, setClients] = useState<Client[]>([]);
     const [selectedClientId, setSelectedClientId] = useState<string>('');
     const [lineItems, setLineItems] = useState<LineItem[]>([{ description: '', quantity: 1, unitPrice: 0, total: 0 }]);
@@ -70,7 +72,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
             newLineItems[index][field] = parseFloat(value) || 0;
             newLineItems[index].total = newLineItems[index].quantity * newLineItems[index].unitPrice;
         } else {
-            newLineItems[index][field] = value;
+            (newLineItems[index] as any)[field] = value;
         }
         setLineItems(newLineItems);
     };
@@ -94,8 +96,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
         return subtotal + taxAmount;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSaveAndPrint = async () => {
         setError(null);
         setIsLoading(true);
 
@@ -108,12 +109,29 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                 subtotal: calculateSubtotal(),
                 total: calculateTotal(),
                 notes,
+                recordAsIncome: true,
             };
-            await apiRequest('/invoices', { method: 'POST', body: payload });
+            const response = await apiRequest<any>('/invoices', { method: 'POST', body: payload });
+
+            // Trigger print
+            const selectedClient = clients.find(c => c._id === selectedClientId);
+            printReceipt({
+                invoice: {
+                    invoiceNumber: response.invoiceNumber,
+                    lineItems,
+                    subtotal: calculateSubtotal(),
+                    tax: taxRate,
+                    total: calculateTotal(),
+                    notes,
+                    dueDate,
+                },
+                client: selectedClient,
+            });
+
             onSave();
             onClose();
         } catch (err: any) {
-            setError(err.message || 'Failed to create invoice.');
+            setError(err.message || 'Failed to create and print invoice.');
         } finally {
             setIsLoading(false);
         }
@@ -123,7 +141,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6">
                 <h3 className="text-lg font-bold mb-4 text-slate-800">Create New Invoice</h3>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={(e) => { e.preventDefault(); }} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1 text-slate-700">Client</label>
                         <select
@@ -220,20 +238,50 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
 
                     {error && <div className="bg-rose-50 text-rose-600 p-3 rounded-lg text-sm">{error}</div>}
 
-                    <div className="flex gap-4 mt-6">
+                    <div className="flex flex-col sm:flex-row gap-3 mt-6">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                            className="flex-1 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors font-bold text-slate-600 order-3 sm:order-1"
                         >
                             Cancel
                         </button>
                         <button
-                            type="submit"
-                            className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition-colors disabled:bg-indigo-300"
+                            type="button"
+                            onClick={async () => {
+                                // Basic form of handleSubmit but without print
+                                setIsLoading(true);
+                                try {
+                                    const payload = {
+                                        clientId: selectedClientId,
+                                        lineItems,
+                                        dueDate,
+                                        tax: taxRate,
+                                        subtotal: calculateSubtotal(),
+                                        total: calculateTotal(),
+                                        notes,
+                                    };
+                                    await apiRequest('/invoices', { method: 'POST', body: payload });
+                                    onSave();
+                                    onClose();
+                                } catch (err: any) {
+                                    setError(err.message || 'Failed to create invoice.');
+                                } finally {
+                                    setIsLoading(false);
+                                }
+                            }}
+                            className="flex-1 py-3 bg-slate-100 text-slate-900 rounded-xl hover:bg-slate-200 transition-colors font-bold order-2"
                             disabled={isLoading}
                         >
-                            {isLoading ? 'Creating...' : 'Create Invoice'}
+                            Save Only
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSaveAndPrint}
+                            className="flex-[2] py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all hover:-translate-y-0.5 active:scale-95 disabled:bg-indigo-300 font-black uppercase tracking-wider text-xs order-1 sm:order-3"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? 'Processing...' : 'Print & Record Income'}
                         </button>
                     </div>
                 </form>

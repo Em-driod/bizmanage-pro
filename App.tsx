@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { PrintProvider } from './context/PrintContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import ToastContainer from './components/ToastContainer';
@@ -60,10 +61,12 @@ const App: React.FC = () => {
     <AuthProvider>
       <NotificationProvider>
         <CurrencyProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
-          <ToastContainer />
+          <PrintProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+            <ToastContainer />
+          </PrintProvider>
         </CurrencyProvider>
       </NotificationProvider>
     </AuthProvider>
