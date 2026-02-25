@@ -82,7 +82,7 @@ const ClientDetailModal: React.FC<ClientDetailModalProps> = ({ client, onClose, 
             <h4 className="font-bold text-slate-900 mb-4">Contact Information</h4>
             <p className="text-sm"><strong>Email:</strong> {client.email}</p>
             <p className="text-sm"><strong>Phone:</strong> {client.phone}</p>
-            <p className="text-sm"><strong>Business Value:</strong> {formatCurrency(client.businessValue)}</p>
+            <p className="text-sm"><strong>Contact Base:</strong> {client.businessValue}%</p>
             <p className="text-sm"><strong>Status:</strong> {client.status}</p>
             <p className="text-sm"><strong>Balance:</strong> {formatCurrency(client.balance || 0)}</p>
           </div>

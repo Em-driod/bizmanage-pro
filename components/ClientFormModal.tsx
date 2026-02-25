@@ -85,7 +85,10 @@ const ClientFormModal: React.FC<ClientFormModalProps> = ({ showModal, onClose, o
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Business Value</label>
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Contact Base</label>
+              <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">{formData.businessValue}%</span>
+            </div>
             <input
               type="range" min="0" max="100" value={formData.businessValue}
               onChange={(e) => setFormData({ ...formData, businessValue: parseInt(e.target.value) })}

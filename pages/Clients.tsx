@@ -118,7 +118,7 @@ const Clients: React.FC = () => {
                   <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-extrabold uppercase tracking-[2px]">
                     <th className="px-8 py-5">Contact</th>
                     <th className="px-8 py-5">Phone</th>
-                    <th className="px-8 py-5">Value</th>
+                    <th className="px-8 py-5">Contact Base</th>
                     <th className="px-8 py-5">Status</th>
                     <th className="px-8 py-5 text-right">Actions</th>
                   </tr>
@@ -141,7 +141,7 @@ const Clients: React.FC = () => {
                         <span className="text-sm font-semibold text-slate-600">{client.phone}</span>
                       </td>
                       <td className="px-8 py-6">
-                        <span className="text-sm font-black text-indigo-600">{formatCurrency(client.businessValue)}</span>
+                        <span className="text-sm font-black text-indigo-600">{client.businessValue}%</span>
                       </td>
                       <td className="px-8 py-6">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black uppercase rounded-full ${client.status === 'active'
@@ -212,8 +212,8 @@ const Clients: React.FC = () => {
                       <p className="text-xs font-semibold text-slate-600">{client.phone}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Value</p>
-                      <p className="text-xs font-black text-indigo-600">{formatCurrency(client.businessValue)}</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Contact Base</p>
+                      <p className="text-xs font-black text-indigo-600">{client.businessValue}%</p>
                     </div>
                   </div>
 

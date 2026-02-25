@@ -30,6 +30,7 @@ export interface Client {
   businessId: string;
   businessValue: number;
   status: 'active' | 'inactive';
+  balance?: number;
 }
 
 export interface Transaction {
