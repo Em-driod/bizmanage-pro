@@ -10,7 +10,8 @@ import { ScannedInvoice, Client } from '../types';
 interface Invoice {
     _id: string;
     invoiceNumber: string;
-    clientId: { _id: string; name: string; email?: string; phone?: string };
+    clientId?: { _id: string; name: string; email?: string; phone?: string } | null;
+    customClientName?: string | null;
     total: number;
     subtotal: number;
     tax: number;
@@ -62,13 +63,37 @@ const Invoices: React.FC = () => {
                     total: fullInvoice.total,
                     dueDate: fullInvoice.dueDate
                 },
-                client: fullInvoice.clientId as unknown as Client
+                client: getClientData(fullInvoice)
             });
         } catch (err: any) {
             alert('Failed to load receipt: ' + err.message);
         }
     };
 
+    const getClientName = (invoice: Invoice) => {
+        if (invoice.customClientName) {
+            return invoice.customClientName;
+        }
+        if (invoice.clientId) {
+            return invoice.clientId.name;
+        }
+        return 'Unknown Client';
+    };
+
+    const getClientData = (invoice: Invoice): Client => {
+        if (invoice.customClientName) {
+            return {
+                _id: 'custom',
+                name: invoice.customClientName,
+                email: '',
+                phone: '',
+                businessId: '',
+                businessValue: 0,
+                status: 'active'
+            };
+        }
+        return invoice.clientId as unknown as Client;
+    };
     const getStatusChip = (status: Invoice['status']) => {
         const styles = {
             draft: 'bg-slate-100 text-slate-600',
@@ -135,7 +160,7 @@ const Invoices: React.FC = () => {
                                             <tr key={invoice._id} className="hover:bg-slate-50/50 transition-colors group">
                                                 <td className="px-8 py-6 font-black text-indigo-600">{invoice.invoiceNumber}</td>
                                                 <td className="px-8 py-6">
-                                                    <p className="text-sm font-bold text-slate-800">{invoice.clientId?.name || 'Unknown Client'}</p>
+                                                    <p className="text-sm font-bold text-slate-800">{getClientName(invoice)}</p>
                                                 </td>
                                                 <td className="px-8 py-6 font-black text-slate-900">{formatCurrency(invoice.total)}</td>
                                                 <td className="px-8 py-6 text-sm text-slate-500 font-medium">
@@ -167,7 +192,7 @@ const Invoices: React.FC = () => {
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-xs font-black text-indigo-600 mb-0.5">{invoice.invoiceNumber}</p>
-                                                <p className="text-sm font-bold text-slate-900">{invoice.clientId?.name || 'Unknown Client'}</p>
+                                                <p className="text-sm font-bold text-slate-900">{getClientName(invoice)}</p>
                                             </div>
                                             {getStatusChip(invoice.status)}
                                         </div>

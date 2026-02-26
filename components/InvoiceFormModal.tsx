@@ -22,6 +22,8 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
     const { printReceipt } = usePrint();
     const [clients, setClients] = useState<Client[]>([]);
     const [selectedClientId, setSelectedClientId] = useState<string>('');
+    const [customClientName, setCustomClientName] = useState<string>('');
+    const [useCustomClient, setUseCustomClient] = useState<boolean>(false);
     const [lineItems, setLineItems] = useState<LineItem[]>([{ description: '', quantity: 1, unitPrice: 0, total: 0 }]);
     const [dueDate, setDueDate] = useState('');
     const [taxRate, setTaxRate] = useState(0); // in percentage
@@ -102,7 +104,8 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
 
         try {
             const payload = {
-                clientId: selectedClientId,
+                clientId: useCustomClient ? null : selectedClientId,
+                customClientName: useCustomClient ? customClientName : null,
                 lineItems,
                 dueDate,
                 tax: taxRate,
@@ -114,7 +117,12 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
             const response = await apiRequest<any>('/invoices', { method: 'POST', body: payload });
 
             // Trigger print
-            const selectedClient = clients.find(c => c._id === selectedClientId);
+            let clientData;
+            if (useCustomClient) {
+                clientData = { _id: 'custom', name: customClientName };
+            } else {
+                clientData = clients.find(c => c._id === selectedClientId);
+            }
             printReceipt({
                 invoice: {
                     invoiceNumber: response.invoiceNumber,
@@ -125,7 +133,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                     notes,
                     dueDate,
                 },
-                client: selectedClient,
+                client: clientData,
             });
 
             onSave();
@@ -144,16 +152,54 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                 <form onSubmit={(e) => { e.preventDefault(); }} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1 text-slate-700">Client</label>
-                        <select
-                            value={selectedClientId}
-                            onChange={(e) => setSelectedClientId(e.target.value)}
-                            className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                            required
-                        >
-                            {clients.map(client => (
-                                <option key={client._id} value={client._id}>{client.name}</option>
-                            ))}
-                        </select>
+                        <div className="space-y-2">
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setUseCustomClient(false)}
+                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                                        !useCustomClient
+                                            ? 'bg-indigo-600 text-white'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    Known Client
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setUseCustomClient(true)}
+                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                                        useCustomClient
+                                            ? 'bg-indigo-600 text-white'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    Custom Name
+                                </button>
+                            </div>
+                            
+                            {!useCustomClient ? (
+                                <select
+                                    value={selectedClientId}
+                                    onChange={(e) => setSelectedClientId(e.target.value)}
+                                    className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    required
+                                >
+                                    {clients.map(client => (
+                                        <option key={client._id} value={client._id}>{client.name}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <input
+                                    type="text"
+                                    value={customClientName}
+                                    onChange={(e) => setCustomClientName(e.target.value)}
+                                    placeholder="Enter client name"
+                                    className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    required
+                                />
+                            )}
+                        </div>
                     </div>
 
                     <div>
@@ -253,7 +299,8 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                 setIsLoading(true);
                                 try {
                                     const payload = {
-                                        clientId: selectedClientId,
+                                        clientId: useCustomClient ? null : selectedClientId,
+                                        customClientName: useCustomClient ? customClientName : null,
                                         lineItems,
                                         dueDate,
                                         tax: taxRate,
