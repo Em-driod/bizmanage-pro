@@ -134,32 +134,34 @@ const Transactions: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-1">
+    <div className="min-h-screen space-y-6 sm:space-y-8 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-8">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 px-1">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Financial Records</h2>
-          <p className="text-sm sm:text-base text-slate-500 font-medium">Track all incoming and outgoing funds with precision.</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Financial Records</h2>
+          <p className="text-sm sm:text-base md:text-lg text-slate-500 font-medium">Track all incoming and outgoing funds with precision.</p>
         </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full sm:w-auto lg:w-auto">
           <button
             onClick={() => { navigate('/scanned-transactions'); }}
-            className="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-slate-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
+            className="w-full sm:w-auto lg:w-full bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 sm:px-5 sm:py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-slate-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
           >
             <i className="fas fa-box-archive text-xs text-indigo-400"></i> View Recorded Scans
           </button>
-          <button
-            onClick={() => { resetForm(); setShowModal(true); }}
-            className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
-          >
-            <i className="fas fa-plus text-xs"></i> New Entry
-          </button>
-          <button
-            onClick={() => { setShowScanModal(true); }}
-            disabled={isSubmitting}
-            className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold disabled:bg-slate-200 disabled:shadow-none"
-          >
-            <i className="fas fa-camera text-xs"></i> {isSubmitting ? 'Processing...' : 'Scan'}
-          </button>
+          <div className="flex gap-2 w-full sm:w-auto lg:w-full">
+            <button
+              onClick={() => { resetForm(); setShowModal(true); }}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 sm:px-5 sm:py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
+            >
+              <i className="fas fa-plus text-xs"></i> New Entry
+            </button>
+            <button
+              onClick={() => { setShowScanModal(true); }}
+              disabled={isSubmitting}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 sm:px-5 sm:py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold disabled:bg-slate-200 disabled:shadow-none"
+            >
+              <i className="fas fa-camera text-xs"></i> {isSubmitting ? 'Processing...' : 'Scan'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -173,22 +175,22 @@ const Transactions: React.FC = () => {
           <div>
             {/* Desktop View */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left min-w-[600px]">
                 <thead>
                   <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-extrabold uppercase tracking-[2px]">
-                    <th className="px-8 py-5">Date</th>
-                    <th className="px-8 py-5">Description</th>
-                    <th className="px-8 py-5">Category</th>
-                    <th className="px-8 py-5">Type</th>
-                    <th className="px-8 py-5">Amount</th>
-                    <th className="px-8 py-5 text-right">Actions</th>
+                    <th className="px-4 md:px-5 py-5">Date</th>
+                    <th className="px-4 md:px-5 py-5">Description</th>
+                    <th className="px-4 md:px-5 py-5">Category</th>
+                    <th className="px-4 md:px-5 py-5">Type</th>
+                    <th className="px-4 md:px-5 py-5">Amount</th>
+                    <th className="px-4 md:px-5 py-5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {transactions.map((tx) => (
                     <tr key={tx._id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-8 py-6 text-sm font-medium text-slate-500">{tx.date}</td>
-                      <td className="px-8 py-6">
+                      <td className="px-4 md:px-5 py-6 text-sm font-medium text-slate-500">{tx.date}</td>
+                      <td className="px-4 md:px-5 py-6">
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-slate-900 truncate">{tx.description}</p>
                           {tx.clientId && (
@@ -198,21 +200,21 @@ const Transactions: React.FC = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-4 md:px-5 py-6">
                         <span className="text-sm font-semibold text-slate-600">{tx.category || 'Uncategorized'}</span>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-4 md:px-5 py-6">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black uppercase rounded-full ${tx.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${tx.type === 'income' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
                           {tx.type}
                         </span>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-4 md:px-5 py-6">
                         <span className={`text-sm font-black ${tx.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'}`}>
                           {tx.type === 'expense' ? '-' : '+'}{formatCurrency(tx.amount)}
                         </span>
                       </td>
-                      <td className="px-8 py-6 text-right">
+                      <td className="px-4 md:px-5 py-6 text-right">
                         <div className="flex justify-end items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0">
                           <button
                             onClick={() => handleEditTransaction(tx)}
