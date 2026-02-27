@@ -58,7 +58,7 @@ const Users: React.FC = () => {
             if (editingUser) {
                 await apiRequest(`/users/${editingUser._id}`, { method: 'PUT', body: dataToSend });
             } else {
-                await apiRequest('/users/register', { method: 'POST', body: dataToSend });
+                await apiRequest('/users/staff', { method: 'POST', body: dataToSend });
             }
             
             setShowModal(false);
