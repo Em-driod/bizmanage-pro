@@ -146,8 +146,8 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl my-4 p-6 max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-bold mb-4 text-slate-800">Create New Invoice</h3>
                 <form onSubmit={(e) => { e.preventDefault(); }} className="space-y-4">
                     <div>

@@ -74,7 +74,7 @@ const Register: React.FC = () => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-2">Identity</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-2">Name</label>
                 <input
                   type="text" required
                   placeholder="Ops Commander"
@@ -107,7 +107,7 @@ const Register: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-2">Encryption Key</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-2">Password</label>
               <input
                 type="password" required
                 placeholder="••••••••"

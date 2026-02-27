@@ -170,7 +170,7 @@ const Invoices: React.FC = () => {
                                                 <td className="px-8 py-6 text-right">
                                                     <button
                                                         onClick={() => handleViewReceipt(invoice._id)}
-                                                        className="w-9 h-9 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-300 hover:text-indigo-600 hover:border-indigo-100 shadow-sm transition-all opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
+                                                        className="w-9 h-9 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 shadow-sm transition-all md:opacity-0 md:group-hover:opacity-100 md:translate-x-2 md:group-hover:translate-x-0"
                                                     >
                                                         <i className="fas fa-eye text-xs"></i>
                                                     </button>
