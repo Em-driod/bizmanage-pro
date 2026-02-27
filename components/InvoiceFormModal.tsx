@@ -284,7 +284,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
 
                     {error && <div className="bg-rose-50 text-rose-600 p-3 rounded-lg text-sm">{error}</div>}
 
-                    <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                    <div className="flex flex-col sm:flex-row gap-3 mt-6 sticky bottom-0 bg-white pt-4 pb-2">
                         <button
                             type="button"
                             onClick={onClose}
