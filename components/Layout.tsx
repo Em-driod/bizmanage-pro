@@ -106,6 +106,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   if (isAdmin) {
     navItems.push({ label: 'Administration', path: '/users', icon: 'fa-fingerprint' });
+    navItems.push({ label: 'Activity Log', path: '/activity', icon: 'fa-history' });
   }
 
   return (

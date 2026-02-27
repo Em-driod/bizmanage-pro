@@ -22,6 +22,7 @@ import Register from './pages/Register';
 import Reports from './pages/Reports';
 import Invoices from './pages/Invoices';
 import ScannedTransactions from './pages/ScannedTransactions';
+import ActivityLog from './pages/ActivityLog';
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -47,6 +48,7 @@ const AppRoutes = () => {
         {/* Admin Only */}
         <Route element={<ProtectedRoute requiredRole={UserRole.ADMIN} />}>
           <Route path="/users" element={<Layout><Users /></Layout>} />
+          <Route path="/activity" element={<Layout><ActivityLog /></Layout>} />
         </Route>
       </Route>
 
