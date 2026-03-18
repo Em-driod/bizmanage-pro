@@ -26,7 +26,7 @@ const MultipleTransactionsModal: React.FC<MultipleTransactionsModalProps> = ({ i
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center animate-in fade-in-25">
       <div className="bg-blue-50 rounded-2xl shadow-xl w-full max-w-2xl p-8 m-4 space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-slate-800">Scanned Transactions</h2>
+          <h2 className="text-xl font-bold text-slate-800">Scanned your Transactions</h2>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-800">
             <i className="fas fa-times"></i>
           </button>
