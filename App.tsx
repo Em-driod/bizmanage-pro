@@ -4,9 +4,11 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { PrintProvider } from './context/PrintContext';
+import { SocketProvider } from './context/SocketContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import ToastContainer from './components/ToastContainer';
+import CommandPalette from './components/CommandPalette';
 import { UserRole } from './types';
 
 // Pages
@@ -23,6 +25,7 @@ import Reports from './pages/Reports';
 import Invoices from './pages/Invoices';
 import ScannedTransactions from './pages/ScannedTransactions';
 import ActivityLog from './pages/ActivityLog';
+import Automation from './pages/Automation';
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -44,6 +47,7 @@ const AppRoutes = () => {
         <Route path="/reports" element={<Layout><Reports /></Layout>} />
         <Route path="/invoices" element={<Layout><Invoices /></Layout>} />
         <Route path="/business" element={<Layout><BusinessPage /></Layout>} />
+        <Route path="/automation" element={<Layout><Automation /></Layout>} />
 
         {/* Admin Only */}
         <Route element={<ProtectedRoute requiredRole={UserRole.ADMIN} />}>
@@ -64,10 +68,13 @@ const App: React.FC = () => {
       <NotificationProvider>
         <CurrencyProvider>
           <PrintProvider>
-            <Router>
-              <AppRoutes />
-            </Router>
-            <ToastContainer />
+            <SocketProvider>
+              <Router>
+                <CommandPalette />
+                <AppRoutes />
+              </Router>
+              <ToastContainer />
+            </SocketProvider>
           </PrintProvider>
         </CurrencyProvider>
       </NotificationProvider>

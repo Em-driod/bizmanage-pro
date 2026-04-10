@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
+import { useSocket } from '../context/SocketContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import ScanTransactionModal from '../components/ScanTransactionModal';
+import AdvisorPanel from '../components/AdvisorPanel';
 
 interface KpiCardProps {
   label: string;
@@ -49,6 +51,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, icon, color, isLoading 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { formatCurrency } = useCurrency();
+  const { isConnected } = useSocket();
   const navigate = useNavigate();
   const [kpis, setKpis] = useState({
     totalIncome: 0,
@@ -110,6 +113,22 @@ const Dashboard: React.FC = () => {
     fetchChartData();
   }, [filter]);
 
+  // Real-time Event Listener
+  useEffect(() => {
+    const handleDataUpdate = (e: any) => {
+      // Re-fetch data behind the scenes to keep dashboard live
+      apiRequest<any>('/dashboard/kpis').then(setKpis).catch(console.error);
+      
+      let query = '';
+      if (filter.interval === '1y' && filter.year) query = `?year=${filter.year}`;
+      else if (filter.interval === '1m' && filter.year && filter.month) query = `?year=${filter.year}&month=${filter.month}`;
+      apiRequest<any>(`/dashboard/chart-data${query}`).then(setChartData).catch(console.error);
+    };
+
+    window.addEventListener('OpsFlowDataUpdate', handleDataUpdate);
+    return () => window.removeEventListener('OpsFlowDataUpdate', handleDataUpdate);
+  }, [filter]);
+
   const handleScanComplete = async (data: any) => {
     setIsScanModalOpen(false);
     try {
@@ -169,9 +188,9 @@ const Dashboard: React.FC = () => {
           </h2>
           <p className="text-sm sm:text-base md:text-lg text-slate-500 font-medium">Here's a performance overview for your business.</p>
         </div>
-        <div className="self-start md:self-auto flex items-center gap-2 text-[10px] sm:text-xs md:text-sm font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
-          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-          Live Updates Enabled
+        <div className={`self-start md:self-auto flex items-center gap-2 text-[10px] sm:text-xs md:text-sm font-bold bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100 ${isConnected ? 'text-slate-400' : 'text-rose-400'}`}>
+          <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+          {isConnected ? 'Live Updates Enabled' : 'Connecting to Core...'}
         </div>
       </div>
 
@@ -206,6 +225,9 @@ const Dashboard: React.FC = () => {
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
         </div>
       )}
+
+      {/* Business Intelligence Advisor (Gemini 2.5 Pro) */}
+      <AdvisorPanel />
 
       {/* Metrics Row: 2 columns on mobile, 3 on tablet, 4 on large screens */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 md:gap-5">

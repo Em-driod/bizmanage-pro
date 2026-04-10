@@ -100,6 +100,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { label: 'Scanned', path: '/scanned-transactions', icon: 'fa-scanner' },
     { label: 'Personnel', path: '/payroll', icon: 'fa-user-tie' },
     { label: 'Reports', path: '/reports', icon: 'fa-chart-pie' },
+    { label: 'Automation', path: '/automation', icon: 'fa-robot' },
     { label: 'Invoices', path: '/invoices', icon: 'fa-file-invoice' },
     { label: 'Entities', path: '/business', icon: 'fa-building' },
   ];
