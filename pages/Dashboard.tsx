@@ -269,21 +269,21 @@ const Dashboard: React.FC = () => {
       {/* Metrics Row: 2 columns on mobile, 3 on tablet, 4 on large screens */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 md:gap-5">
         <KpiCard
-          label="30-Day Income"
+          label="Monthly Income"
           data={kpis.totalIncome}
           icon="fa-arrow-up"
           color="text-emerald-500"
           isLoading={isLoading}
         />
         <KpiCard
-          label="30-Day Expenses"
+          label="Monthly Expenses"
           data={kpis.totalExpenses}
           icon="fa-arrow-down"
           color="text-rose-500"
           isLoading={isLoading}
         />
         <KpiCard
-          label="30-Day Net Profit"
+          label="Monthly Net Profit"
           data={kpis.netProfit}
           icon="fa-dollar-sign"
           color="text-indigo-500"
