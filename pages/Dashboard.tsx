@@ -7,18 +7,23 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useNavigate } from 'react-router-dom';
 import ScanTransactionModal from '../components/ScanTransactionModal';
 import AdvisorPanel from '../components/AdvisorPanel';
+import Sparkline from '../components/Sparkline';
+
+interface KpiData {
+  value: number;
+  trend: number[];
+}
 
 interface KpiCardProps {
   label: string;
-  value: string | number;
+  data: KpiData;
   icon: string;
-  color: string; // Now used for text color (e.g., 'text-emerald-500')
+  color: string;
   isLoading: boolean;
 }
 
-// Fixed KpiCard: Targeted the icon color specifically
-const KpiCard: React.FC<KpiCardProps> = ({ label, value, icon, color, isLoading }) => {
-  // Map color classes to background hover colors
+const KpiCard: React.FC<KpiCardProps> = ({ label, data, icon, color, isLoading }) => {
+  const { formatCurrency } = useCurrency();
   const hoverBgMap: Record<string, string> = {
     'text-emerald-500': 'group-hover:bg-emerald-50',
     'text-rose-500': 'group-hover:bg-rose-50',
@@ -27,22 +32,48 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, icon, color, isLoading 
   };
   const hoverBg = hoverBgMap[color] || 'group-hover:bg-slate-100';
 
+  // Calculate generic percentage change between first half vs second half of the trend array
+  let percentChange = 0;
+  if (data?.trend && data.trend.length > 0) {
+     const len = data.trend.length;
+     const pastSegment = data.trend.slice(0, Math.floor(len/2)).reduce((a,b)=>a+b, 0);
+     const recentSegment = data.trend.slice(Math.floor(len/2)).reduce((a,b)=>a+b, 0);
+     if (pastSegment > 0) {
+       percentChange = ((recentSegment - pastSegment) / pastSegment) * 100;
+     }
+  }
+  const isPositive = percentChange >= 0;
+
   return (
-    <div className="group bg-white border border-slate-100 p-4 sm:p-2 rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out cursor-default">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-        <div className={`w-10 h-10 sm:w-14 sm:h-14 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center transition-colors duration-300 ${hoverBg}`}>
-          <i className={`fas ${icon} text-lg sm:text-2xl ${color} transition-transform duration-300 group-hover:scale-110`}></i>
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 mb-0.5 truncate">{label}</p>
-          <div className="flex items-baseline gap-1">
-            <p className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight truncate">
-              {isLoading ? (
-                <span className="inline-block w-12 sm:w-16 h-5 sm:h-6 bg-slate-100 animate-pulse rounded"></span>
-              ) : value}
-            </p>
-          </div>
-        </div>
+    <div className="group relative bg-[#0B0F19] border border-white/10 p-5 rounded-[1.25rem] shadow-xl overflow-hidden transition-all duration-300 hover:border-white/20">
+      {/* Background glow mapping */}
+      <div className={`absolute top-0 right-0 w-32 h-32 blur-[40px] opacity-20 pointer-events-none rounded-full ${color.replace('text-', 'bg-')}`} />
+      
+      <div className="flex justify-between items-start mb-4 relative z-10">
+         <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5`}>
+            <i className={`fas ${icon} text-lg ${color}`}></i>
+         </div>
+         {!isLoading && (
+            <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded bg-white/5 ${isPositive ? 'text-emerald-400' : 'text-rose-400'} border ${isPositive ? 'border-emerald-500/20' : 'border-rose-500/20'}`}>
+                {isPositive ? '+' : ''}{percentChange.toFixed(1)}%
+            </div>
+         )}
+      </div>
+
+      <div className="relative z-10">
+        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{label}</p>
+        <p className="text-2xl font-black text-white tracking-tight">
+          {isLoading ? (
+            <span className="inline-block w-20 h-7 bg-white/10 animate-pulse rounded"></span>
+          ) : (label === 'Active Clients' ? data.value : formatCurrency(data.value))}
+        </p>
+      </div>
+
+      {/* Sparkline in the background/bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-12 opacity-50 px-2 select-none group-hover:opacity-100 transition-opacity">
+         {!isLoading && data?.trend && (
+            <Sparkline data={data.trend} color={color} width={200} height={40} />
+         )}
       </div>
     </div>
   );
@@ -53,11 +84,17 @@ const Dashboard: React.FC = () => {
   const { formatCurrency } = useCurrency();
   const { isConnected } = useSocket();
   const navigate = useNavigate();
-  const [kpis, setKpis] = useState({
-    totalIncome: 0,
-    totalExpenses: 0,
-    netProfit: 0,
-    totalClients: 0,
+  
+  const [kpis, setKpis] = useState<{
+    totalIncome: KpiData;
+    totalExpenses: KpiData;
+    netProfit: KpiData;
+    totalClients: KpiData;
+  }>({
+    totalIncome: { value: 0, trend: [] },
+    totalExpenses: { value: 0, trend: [] },
+    netProfit: { value: 0, trend: [] },
+    totalClients: { value: 0, trend: [] },
   });
   const [chartData, setChartData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -233,28 +270,28 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 md:gap-5">
         <KpiCard
           label="30-Day Income"
-          value={formatCurrency(kpis.totalIncome)}
+          data={kpis.totalIncome}
           icon="fa-arrow-up"
           color="text-emerald-500"
           isLoading={isLoading}
         />
         <KpiCard
           label="30-Day Expenses"
-          value={formatCurrency(kpis.totalExpenses)}
+          data={kpis.totalExpenses}
           icon="fa-arrow-down"
           color="text-rose-500"
           isLoading={isLoading}
         />
         <KpiCard
           label="30-Day Net Profit"
-          value={formatCurrency(kpis.netProfit)}
+          data={kpis.netProfit}
           icon="fa-dollar-sign"
           color="text-indigo-500"
           isLoading={isLoading}
         />
         <KpiCard
           label="Active Clients"
-          value={kpis.totalClients}
+          data={kpis.totalClients}
           icon="fa-users"
           color="text-blue-500"
           isLoading={isLoading}

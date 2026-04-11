@@ -11,7 +11,7 @@ interface AdvisorData {
     overdueDebt: number;
   };
   advisor: {
-    message: string;
+    scenarios: Array<{ title: string; impact: string; action: string }>;
     status: 'healthy' | 'warning' | 'critical';
   };
 }
@@ -118,24 +118,45 @@ const AdvisorPanel: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Side: Simple Advice */}
-        <div className="flex-1 w-full bg-slate-50/50 rounded-3xl p-6 lg:p-8 border border-slate-100 relative">
-          <div className="absolute top-4 right-4 text-indigo-100">
-             <i className="fas fa-quote-right text-4xl"></i>
+        {/* Right Side: Agentic Scenarios */}
+        <div className="flex-1 w-full bg-[#080B13] rounded-3xl p-6 lg:p-8 border border-white/5 relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+          
+          <div className="flex items-center justify-between mb-6 relative z-10">
+             <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                 <div className="w-5 h-5 rounded-md bg-indigo-500/20 flex items-center justify-center">
+                    <i className="fas fa-bolt text-[10px] text-indigo-400"></i>
+                 </div>
+                 AI Strategic Scenarios
+             </p>
+             <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest border border-white/10 px-2 py-1 rounded bg-white/5">Auto-generated</span>
           </div>
-          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-            <i className="fas fa-sparkles text-[8px]"></i> Advice
-          </p>
-          <div className="relative">
-            <p className="text-xl sm:text-2xl font-bold text-slate-800 leading-tight">
-              {advisor.message}
-            </p>
-          </div>
-          <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Live Insight</span>
-            <button className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest px-3 py-1 hover:bg-slate-100 rounded-lg">
-              Got it
-            </button>
+
+          <div className="space-y-4 relative z-10">
+            {advisor.scenarios?.map((scenario: any, idx: number) => (
+               <div key={idx} className="group p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all cursor-default">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                     <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">{scenario.title}</h4>
+                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black tracking-wider uppercase shrink-0">
+                        <i className="fas fa-chart-line"></i> {scenario.impact}
+                     </div>
+                  </div>
+                  <p className="text-sm text-slate-400 leading-relaxed font-medium">
+                     {scenario.action}
+                  </p>
+                  <div className="mt-4 pt-3 border-t border-white/5 flex justify-end">
+                      <button className="text-[10px] font-black text-slate-500 hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1">
+                          Execute Workflow <i className="fas fa-arrow-right"></i>
+                      </button>
+                  </div>
+               </div>
+            ))}
+            
+            {(!advisor.scenarios || advisor.scenarios.length === 0) && (
+                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5">
+                    <p className="text-sm text-slate-400 font-medium">Business operates at optimal capacity. No immediate critical actions flagged by AI.</p>
+                </div>
+            )}
           </div>
         </div>
 
