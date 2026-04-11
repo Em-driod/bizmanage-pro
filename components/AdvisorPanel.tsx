@@ -64,84 +64,77 @@ const AdvisorPanel: React.FC = () => {
   const currentStatusStyle = statusColors[advisor.status];
 
   return (
-    <div className="bg-[#0A0F1A] rounded-3xl p-8 lg:p-10 text-white shadow-2xl relative overflow-hidden mb-10 w-full">
-      {/* Decorative gradients */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3"></div>
-      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-violet-600/10 rounded-full blur-[80px] translate-y-1/3 -translate-x-1/3"></div>
-
-      <div className="relative z-10 flex flex-col lg:flex-row gap-10 items-stretch">
+    <div className="bg-white rounded-[2rem] p-6 lg:p-8 border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden mb-8 w-full">
+      {/* Subtle decorative elements matching light theme */}
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-50 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 opacity-50"></div>
+      
+      <div className="relative z-10 flex flex-col lg:flex-row gap-8 items-center">
         
         {/* Left Side: Score & Core Metrics */}
-        <div className="flex-1 lg:border-r lg:border-white/10 lg:pr-10">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-xl shadow-lg shadow-indigo-500/30">
+        <div className="w-full lg:w-auto lg:min-w-[300px] flex flex-col items-center lg:items-start text-center lg:text-left lg:border-r lg:border-slate-100 lg:pr-10">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-sm shadow-md">
               <i className="fas fa-brain"></i>
             </div>
-            <div>
-              <h3 className="text-xl font-black tracking-tight">OpsFlow Intelligence</h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Powered by Gemini 2.5 Pro</p>
-            </div>
+            <h3 className="text-lg font-black text-slate-900 tracking-tight">Intelligence</h3>
           </div>
 
-          <div className="flex items-end gap-6 mb-8">
-            <div>
-              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] mb-2">Health Score</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400">
-                  {metrics.healthScore}
-                </span>
-                <span className="text-xl font-bold text-slate-500">/100</span>
-              </div>
+          <div className="flex flex-col items-center lg:items-start mb-6">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Score</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-6xl font-black tracking-tighter text-slate-900">
+                {metrics.healthScore}
+              </span>
+              <span className="text-lg font-bold text-slate-300">/100</span>
             </div>
             
             {/* Status Badge */}
-            <div className={`px-4 py-2 rounded-xl border flex items-center gap-2 mb-2 ${currentStatusStyle}`}>
-              <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
-              <span className="text-xs font-black uppercase tracking-wider">
-                {advisor.status === 'healthy' ? 'OPTIMAL' : advisor.status === 'warning' ? 'CAUTION' : 'CRITICAL'}
+            <div className={`mt-3 px-3 py-1 rounded-full border flex items-center gap-1.5 ${currentStatusStyle} bg-opacity-10 border-opacity-20`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider">
+                {advisor.status === 'healthy' ? 'Great' : advisor.status === 'warning' ? 'Check' : 'Help'}
               </span>
             </div>
           </div>
 
-          {/* Quick Stats Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-              <i className="fas fa-plane-departure text-indigo-400 mb-2"></i>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Cash Runway</p>
-              <p className="text-lg font-black">{metrics.cashRunwayMonths >= 99 ? '∞' : `${metrics.cashRunwayMonths.toFixed(1)} mo`}</p>
+          {/* Quick Stats Grid - Cleaner layout */}
+          <div className="grid grid-cols-2 gap-3 w-full max-w-xs lg:max-w-none">
+            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+              <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wide mb-0.5 text-center">Time Left</p>
+              <p className="text-sm font-black text-slate-800 text-center">{metrics.cashRunwayMonths >= 99 ? '∞' : `${metrics.cashRunwayMonths.toFixed(1)} mo`}</p>
             </div>
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-              <i className="fas fa-fire text-rose-400 mb-2"></i>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Avg Burn</p>
-              <p className="text-lg font-black">{formatCurrency(metrics.monthlyBurnRate)}</p>
+            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+              <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wide mb-0.5 text-center">Spend</p>
+              <p className="text-sm font-black text-slate-800 text-center">{formatCurrency(metrics.monthlyBurnRate)}</p>
             </div>
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-              <i className="fas fa-percentage text-emerald-400 mb-2"></i>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Net Margin</p>
-              <p className="text-lg font-black">{metrics.netMargin}%</p>
+            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+              <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wide mb-0.5 text-center">Profit</p>
+              <p className="text-sm font-black text-slate-800 text-center">{metrics.netMargin}%</p>
             </div>
-             <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-              <i className="fas fa-file-invoice-dollar text-amber-400 mb-2"></i>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">At Risk Debt</p>
-              <p className="text-lg font-black">{formatCurrency(metrics.overdueDebt)}</p>
+             <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
+              <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wide mb-0.5 text-center">Unpaid</p>
+              <p className="text-sm font-black text-slate-800 text-center">{formatCurrency(metrics.overdueDebt)}</p>
             </div>
           </div>
         </div>
 
-        {/* Right Side: AI Advice */}
-        <div className="flex-1 flex flex-col justify-center bg-white/5 rounded-3xl p-6 lg:p-8 border border-white/10 backdrop-blur-sm">
-          <p className="text-xs font-bold text-indigo-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-            <i className="fas fa-sparkles"></i> CFO Directive
+        {/* Right Side: Simple Advice */}
+        <div className="flex-1 w-full bg-slate-50/50 rounded-3xl p-6 lg:p-8 border border-slate-100 relative">
+          <div className="absolute top-4 right-4 text-indigo-100">
+             <i className="fas fa-quote-right text-4xl"></i>
+          </div>
+          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <i className="fas fa-sparkles text-[8px]"></i> Advice
           </p>
-          <div className="prose prose-invert prose-p:leading-relaxed prose-p:text-slate-300 max-w-none">
-            <p className="text-lg sm:text-xl md:text-2xl font-medium !leading-snug">
-              "{advisor.message}"
+          <div className="relative">
+            <p className="text-xl sm:text-2xl font-bold text-slate-800 leading-tight">
+              {advisor.message}
             </p>
           </div>
-          <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
-            <span className="text-[10px] text-slate-500 font-medium">Insights generated in real-time.</span>
-            <button className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors tooltip" aria-label="Dismiss">
-              <i className="fas fa-times text-xs"></i>
+          <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Live Insight</span>
+            <button className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest px-3 py-1 hover:bg-slate-100 rounded-lg">
+              Got it
             </button>
           </div>
         </div>
