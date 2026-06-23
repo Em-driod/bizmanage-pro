@@ -10,12 +10,16 @@ interface ProfileForm {
   email: string; website: string; instagram: string; location: string;
   services: ServiceItem[]; isPublic: boolean;
   coverImage: string; logoImage: string; accentColor: string;
+  bankName: string; accountNumber: string; accountName: string;
+  bankName2: string; accountNumber2: string; accountName2: string;
 }
 
 const emptyProfile: ProfileForm = {
   tagline: '', description: '', whatsapp: '', email: '',
   website: '', instagram: '', location: '', services: [], isPublic: false,
   coverImage: '', logoImage: '', accentColor: '#6366f1',
+  bankName: '', accountNumber: '', accountName: '',
+  bankName2: '', accountNumber2: '', accountName2: '',
 };
 
 const ACCENT_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#000000'];
@@ -70,7 +74,7 @@ const BusinessPage: React.FC = () => {
         setBusiness(data);
         setFormData({ name: data.name, address: data.address || '', email: data.email || '', phone: data.phone || '', currency: data.currency });
         if (data.profile) {
-          setProfile({ ...emptyProfile, ...data.profile, services: data.profile.services || [], coverImage: data.profile.coverImage || '', logoImage: data.profile.logoImage || '', accentColor: data.profile.accentColor || '#6366f1' });
+          setProfile({ ...emptyProfile, ...data.profile, services: data.profile.services || [], coverImage: data.profile.coverImage || '', logoImage: data.profile.logoImage || '', accentColor: data.profile.accentColor || '#6366f1', bankName: data.profile.bankName || '', accountNumber: data.profile.accountNumber || '', accountName: data.profile.accountName || '', bankName2: data.profile.bankName2 || '', accountNumber2: data.profile.accountNumber2 || '', accountName2: data.profile.accountName2 || '' });
         }
         if (data.slug) {
           const base = window.location.origin + window.location.pathname;
@@ -509,6 +513,46 @@ const BusinessPage: React.FC = () => {
                     value={(profile as any)[f.key]} onChange={e => setProfile(p => ({ ...p, [f.key]: e.target.value }))} />
                 </div>
               ))}
+            </div>
+          </SectionCard>
+
+          {/* Bank Details */}
+          <SectionCard icon="fa-university" title="Payment Details" subtitle="Bank accounts shown on invoices" accent="#10b981">
+            <div className="space-y-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Primary Account</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className={labelCls}>Bank Name</label>
+                    <input className={inputCls} type="text" placeholder="e.g. GTBank" value={profile.bankName} onChange={e => setProfile(p => ({ ...p, bankName: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Account Number</label>
+                    <input className={inputCls} type="text" placeholder="0123456789" value={profile.accountNumber} onChange={e => setProfile(p => ({ ...p, accountNumber: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Account Name</label>
+                    <input className={inputCls} type="text" placeholder="Your Business Name" value={profile.accountName} onChange={e => setProfile(p => ({ ...p, accountName: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Secondary Account (Optional)</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className={labelCls}>Bank Name</label>
+                    <input className={inputCls} type="text" placeholder="e.g. Access Bank" value={profile.bankName2} onChange={e => setProfile(p => ({ ...p, bankName2: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Account Number</label>
+                    <input className={inputCls} type="text" placeholder="0123456789" value={profile.accountNumber2} onChange={e => setProfile(p => ({ ...p, accountNumber2: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Account Name</label>
+                    <input className={inputCls} type="text" placeholder="Your Business Name" value={profile.accountName2} onChange={e => setProfile(p => ({ ...p, accountName2: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
             </div>
           </SectionCard>
 

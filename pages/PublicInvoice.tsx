@@ -13,7 +13,18 @@ interface LineItem {
 interface PublicInvoiceData {
   _id: string;
   invoiceNumber: string;
-  businessId: { name: string; currency: string };
+  businessId: {
+    name: string;
+    currency: string;
+    profile?: {
+      bankName?: string;
+      accountNumber?: string;
+      accountName?: string;
+      bankName2?: string;
+      accountNumber2?: string;
+      accountName2?: string;
+    };
+  };
   clientId?: { name: string; email: string } | null;
   customClientName?: string | null;
   lineItems: LineItem[];
@@ -241,6 +252,29 @@ const PublicInvoice: React.FC = () => {
               <div className="bg-slate-50 rounded-xl p-4 mb-6">
                 <p className="text-[10px] font-black uppercase tracking-[2px] text-slate-400 mb-1">Notes</p>
                 <p className="text-sm text-slate-600 leading-relaxed">{invoice.notes}</p>
+              </div>
+            )}
+
+            {/* Bank Details */}
+            {(invoice.businessId.profile?.bankName || invoice.businessId.profile?.bankName2) && (
+              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-6">
+                <p className="text-[10px] font-black uppercase tracking-[2px] text-indigo-400 mb-3">Payment Details</p>
+                <div className="space-y-3">
+                  {invoice.businessId.profile?.bankName && (
+                    <div className="bg-white rounded-lg p-3 border border-indigo-100">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{invoice.businessId.profile.bankName}</p>
+                      <p className="text-base font-black text-slate-900 tracking-widest">{invoice.businessId.profile.accountNumber}</p>
+                      <p className="text-sm font-semibold text-slate-600">{invoice.businessId.profile.accountName}</p>
+                    </div>
+                  )}
+                  {invoice.businessId.profile?.bankName2 && (
+                    <div className="bg-white rounded-lg p-3 border border-indigo-100">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{invoice.businessId.profile.bankName2}</p>
+                      <p className="text-base font-black text-slate-900 tracking-widest">{invoice.businessId.profile.accountNumber2}</p>
+                      <p className="text-sm font-semibold text-slate-600">{invoice.businessId.profile.accountName2}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
