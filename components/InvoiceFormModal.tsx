@@ -40,7 +40,8 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
     useEffect(() => {
         const fetchClients = async () => {
             try {
-                const data = await apiRequest<Client[]>('/clients');
+                const res = await apiRequest<{ data: Client[] } | Client[]>('/clients?limit=200');
+                const data = Array.isArray(res) ? res : res.data ?? [];
                 setClients(data);
                 if (data.length > 0) {
                     setSelectedClientId(data[0]._id);
