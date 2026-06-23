@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
 import { Client, ScannedInvoice } from '../types';
 import { useCurrency } from '../context/CurrencyContext';
@@ -22,6 +23,8 @@ interface InvoiceFormModalProps {
 const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, initialData, prefilledClientId }) => {
     const { formatCurrency } = useCurrency();
     const { printReceipt } = usePrint();
+    const navigate = useNavigate();
+    const [showBankPrompt, setShowBankPrompt] = useState(false);
     const [clients, setClients] = useState<Client[]>([]);
     const [selectedClientId, setSelectedClientId] = useState<string>(prefilledClientId || '');
     const [customClientName, setCustomClientName] = useState<string>('');
@@ -114,6 +117,16 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
 
     const handleSaveAndPrint = async () => {
         setError(null);
+
+        // Check bank details first
+        try {
+            const biz = await apiRequest<any>('/businesses/me');
+            if (!biz?.profile?.accountNumber) {
+                setShowBankPrompt(true);
+                return;
+            }
+        } catch { /* proceed anyway if check fails */ }
+
         setIsLoading(true);
 
         try {
@@ -131,12 +144,9 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
             const response = await apiRequest<any>('/invoices', { method: 'POST', body: payload });
 
             // Trigger print
-            let clientData;
-            if (useCustomClient) {
-                clientData = { _id: 'custom', name: customClientName };
-            } else {
-                clientData = clients.find(c => c._id === selectedClientId);
-            }
+            const clientData: Client | undefined = useCustomClient
+                ? ({ _id: 'custom', name: customClientName } as unknown as Client)
+                : clients.find(c => c._id === selectedClientId);
             printReceipt({
                 invoice: {
                     invoiceNumber: response.invoiceNumber,
@@ -158,6 +168,35 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
             setIsLoading(false);
         }
     };
+
+    if (showBankPrompt) {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center space-y-4">
+                    <div className="text-4xl">🏦</div>
+                    <h3 className="text-lg font-bold text-slate-800">Add Your Bank Details First</h3>
+                    <p className="text-sm text-slate-500">
+                        Your invoice needs a bank account number so clients know where to pay you.
+                        Add it in Settings and come back.
+                    </p>
+                    <div className="flex flex-col gap-2 pt-2">
+                        <button
+                            onClick={() => { onClose(); navigate('/businesses'); }}
+                            className="w-full py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                        >
+                            Go to Settings
+                        </button>
+                        <button
+                            onClick={() => setShowBankPrompt(false)}
+                            className="w-full py-2.5 text-slate-500 text-sm hover:text-slate-700"
+                        >
+                            Continue anyway
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-start justify-center sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
