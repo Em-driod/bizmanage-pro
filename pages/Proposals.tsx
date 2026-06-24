@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
+import ProposalShareModal from '../components/ProposalShareModal';
 import type { Product } from './Products';
 
 interface LineItem {
@@ -57,6 +58,7 @@ const Proposals: React.FC = () => {
   const [toast, setToast] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [showCatalog, setShowCatalog] = useState(false);
+  const [sharingProposal, setSharingProposal] = useState<Proposal | null>(null);
 
   const [form, setForm] = useState({
     title: '',
@@ -315,8 +317,8 @@ const Proposals: React.FC = () => {
                   </button>
                 )}
                 {['draft', 'sent', 'accepted'].includes(p.status) && (
-                  <button onClick={() => shareWhatsApp(p)} className="text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors">
-                    <i className="fab fa-whatsapp mr-1" />WhatsApp
+                  <button onClick={() => setSharingProposal(p)} className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors">
+                    <i className="fas fa-share-nodes mr-1 text-[10px]" />Share
                   </button>
                 )}
                 {p.status === 'accepted' && !p.convertedInvoiceId && (
@@ -333,6 +335,11 @@ const Proposals: React.FC = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Share Modal */}
+      {sharingProposal && (
+        <ProposalShareModal proposal={sharingProposal} onClose={() => setSharingProposal(null)} />
       )}
 
       {/* Create / Edit Form Modal */}
