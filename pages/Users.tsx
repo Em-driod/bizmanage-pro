@@ -3,12 +3,33 @@ import { User, UserRole } from '../types';
 import { apiRequest } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
+interface ActivityEntry {
+  _id: string;
+  action: string;
+  resource: string;
+  details?: any;
+  timestamp?: string;
+  createdAt?: string;
+}
+
+const ACTION_COLOR: Record<string, string> = {
+  CREATE: 'bg-emerald-100 text-emerald-700',
+  UPDATE: 'bg-blue-100 text-blue-700',
+  DELETE: 'bg-red-100 text-red-600',
+  LOGIN: 'bg-indigo-100 text-indigo-700',
+  LOGOUT: 'bg-slate-100 text-slate-600',
+  VIEW: 'bg-amber-100 text-amber-700',
+};
+
 const Users: React.FC = () => {
     const { user: currentUser, isAdmin } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [userActivity, setUserActivity] = useState<ActivityEntry[]>([]);
+    const [activityLoading, setActivityLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -90,6 +111,20 @@ const Users: React.FC = () => {
         }
     };
 
+    const openUserActivity = async (user: User) => {
+        setSelectedUser(user);
+        setActivityLoading(true);
+        setUserActivity([]);
+        try {
+            const res = await apiRequest<{ logs: ActivityEntry[] }>(`/activity?userId=${user._id}&limit=100`);
+            setUserActivity(res.logs || []);
+        } catch {
+            setUserActivity([]);
+        } finally {
+            setActivityLoading(false);
+        }
+    };
+
     const getRoleBadge = (role: UserRole) => {
         const styles = {
             [UserRole.ADMIN]: 'bg-rose-100 text-rose-700',
@@ -154,7 +189,7 @@ const Users: React.FC = () => {
                                         <tr><td colSpan={4} className="text-center py-12 text-slate-400 font-medium italic">No users found.</td></tr>
                                     ) : (
                                         users.map(user => (
-                                            <tr key={user._id} className="hover:bg-slate-50/50 transition-colors group">
+                                            <tr key={user._id} onClick={() => openUserActivity(user)} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
                                                 <td className="px-8 py-6">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
@@ -174,7 +209,7 @@ const Users: React.FC = () => {
                                                 <td className="px-8 py-6">
                                                     {getRoleBadge(user.role)}
                                                 </td>
-                                                <td className="px-8 py-6 text-right">
+                                                <td className="px-8 py-6 text-right" onClick={e => e.stopPropagation()}>
                                                     <div className="flex justify-end items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0">
                                                         <button
                                                             onClick={() => handleEdit(user)}
@@ -252,6 +287,74 @@ const Users: React.FC = () => {
                     </>
                 )}
             </div>
+
+            {/* User Activity Drawer */}
+            {selectedUser && (
+                <div className="fixed inset-0 z-50 flex justify-end">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSelectedUser(null)} />
+                    <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                        {/* Drawer header */}
+                        <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-4 flex-shrink-0">
+                            <div className="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center">
+                                <i className="fas fa-user text-indigo-600 text-sm"></i>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-base font-black text-slate-900 truncate">{selectedUser.name}</p>
+                                <p className="text-xs text-slate-400 truncate">{selectedUser.email}</p>
+                            </div>
+                            <button onClick={() => setSelectedUser(null)} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 transition-colors flex-shrink-0">
+                                <i className="fas fa-times text-sm"></i>
+                            </button>
+                        </div>
+
+                        {/* Activity list */}
+                        <div className="flex-1 overflow-y-auto px-6 py-4">
+                            {activityLoading ? (
+                                <div className="flex items-center justify-center py-16">
+                                    <div className="w-7 h-7 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                                </div>
+                            ) : userActivity.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-center">
+                                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
+                                        <i className="fas fa-clock-rotate-left text-slate-400 text-lg"></i>
+                                    </div>
+                                    <p className="text-sm font-bold text-slate-600">No activity yet</p>
+                                    <p className="text-xs text-slate-400 mt-1">Actions will appear here as {selectedUser.name} uses the app</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">{userActivity.length} actions recorded</p>
+                                    {userActivity.map(entry => {
+                                        const ts = entry.timestamp || entry.createdAt;
+                                        const date = ts ? new Date(ts) : null;
+                                        return (
+                                            <div key={entry._id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
+                                                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full flex-shrink-0 mt-0.5 ${ACTION_COLOR[entry.action] || 'bg-slate-100 text-slate-600'}`}>
+                                                    {entry.action}
+                                                </span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-semibold text-slate-700 capitalize">{entry.resource.toLowerCase()}</p>
+                                                    {entry.details && (
+                                                        <p className="text-xs text-slate-400 truncate mt-0.5">
+                                                            {Object.entries(entry.details).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                {date && (
+                                                    <div className="text-right flex-shrink-0">
+                                                        <p className="text-[10px] text-slate-400">{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                                                        <p className="text-[10px] text-slate-400">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* User Modal */}
             {showModal && (
