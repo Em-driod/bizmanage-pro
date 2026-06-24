@@ -11,7 +11,8 @@ interface ActivityLog {
   resource: string;
   resourceId?: string;
   details?: any;
-  timestamp: string;
+  timestamp?: string;
+  createdAt?: string;
   ipAddress?: string;
 }
 
@@ -214,10 +215,10 @@ const ActivityLog: React.FC = () => {
                       <td className="px-8 py-6">
                         <div>
                           <p className="text-sm font-medium text-slate-900">
-                            {new Date(log.timestamp).toLocaleDateString()}
+                            {new Date(log.timestamp || log.createdAt || '').toLocaleDateString()}
                           </p>
                           <p className="text-xs text-slate-500">
-                            {new Date(log.timestamp).toLocaleTimeString()}
+                            {new Date(log.timestamp || log.createdAt || '').toLocaleTimeString()}
                           </p>
                         </div>
                       </td>
