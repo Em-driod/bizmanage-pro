@@ -13,6 +13,8 @@ const Register: React.FC = () => {
     businessName: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -121,13 +123,18 @@ const Register: React.FC = () => {
 
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-2">Password</label>
-              <input
-                type="password" required
-                placeholder="Min. 8 characters"
-                className="w-full px-6 py-5 bg-white border border-slate-100 rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-700 placeholder:text-slate-300"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'} required
+                  placeholder="Min. 8 characters"
+                  className="w-full px-6 py-5 pr-14 bg-white border border-slate-100 rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-700 placeholder:text-slate-300"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 hover:text-indigo-500 transition-colors">
+                  <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                </button>
+              </div>
               {formData.password && (
                 <div className="px-2 pt-1">
                   <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -140,17 +147,22 @@ const Register: React.FC = () => {
 
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-2">Confirm Password</label>
-              <input
-                type="password" required
-                placeholder="Repeat your password"
-                className={`w-full px-6 py-5 bg-white border rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-700 placeholder:text-slate-300 ${
-                  formData.confirmPassword && formData.confirmPassword !== formData.password
-                    ? 'border-rose-300'
-                    : 'border-slate-100'
-                }`}
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'} required
+                  placeholder="Repeat your password"
+                  className={`w-full px-6 py-5 pr-14 bg-white border rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-700 placeholder:text-slate-300 ${
+                    formData.confirmPassword && formData.confirmPassword !== formData.password
+                      ? 'border-rose-300'
+                      : 'border-slate-100'
+                  }`}
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                />
+                <button type="button" onClick={() => setShowConfirmPassword(v => !v)} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 hover:text-indigo-500 transition-colors">
+                  <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                </button>
+              </div>
               {formData.confirmPassword && formData.confirmPassword !== formData.password && (
                 <p className="text-[11px] font-bold text-rose-500 px-2">Passwords do not match</p>
               )}
