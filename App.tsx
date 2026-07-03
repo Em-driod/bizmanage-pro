@@ -40,6 +40,8 @@ import ClientPortal from './pages/ClientPortal';
 import CapitalAssets from './pages/CapitalAssets';
 import Budgets from './pages/Budgets';
 import PublicReceipt from './pages/PublicReceipt';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -58,6 +60,8 @@ const AppRoutes = () => {
       <Route path="/payslip/:token" element={<PublicPayslip />} />
       <Route path="/portal/:token" element={<ClientPortal />} />
       <Route path="/receipt/:token" element={<PublicReceipt />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
 
       {/* Protected Application Routes */}
       <Route element={<ProtectedRoute />}>
