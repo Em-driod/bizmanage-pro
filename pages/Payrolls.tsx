@@ -101,7 +101,7 @@ const Payrolls: React.FC = () => {
   const handleSharePayslip = async (id: string) => {
     try {
       const { token } = await apiRequest<{ token: string }>(`/payrolls/${id}/payslip`, { method: 'POST' });
-      const link = `${window.location.origin}${window.location.pathname}#/payslip/${token}`;
+      const link = `${window.location.origin}/payslip/${token}`;
       await navigator.clipboard.writeText(link);
       showToast('Payslip link copied!');
     } catch {

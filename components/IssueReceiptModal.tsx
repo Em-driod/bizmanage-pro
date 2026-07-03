@@ -128,7 +128,7 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
   };
 
   const publicLink = receipt
-    ? `${window.location.origin}${window.location.pathname}#/receipt/${receipt.publicToken}`
+    ? `${window.location.origin}/receipt/${receipt.publicToken}`
     : '';
 
   const formattedDate = form.date

@@ -68,7 +68,7 @@ const Clients: React.FC = () => {
   const handleCopyPortalLink = async (clientId: string) => {
     try {
       const { token } = await apiRequest<{ token: string }>(`/clients/${clientId}/portal`, { method: 'POST' });
-      const link = `${window.location.origin}${window.location.pathname}#/portal/${token}`;
+      const link = `${window.location.origin}/portal/${token}`;
       await navigator.clipboard.writeText(link);
       showPortalToast('Client portal link copied!');
     } catch {

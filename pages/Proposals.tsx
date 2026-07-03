@@ -190,13 +190,13 @@ const Proposals: React.FC = () => {
   };
 
   const copyLink = (id: string) => {
-    const link = `${window.location.origin}${window.location.pathname}#/proposal/${id}`;
+    const link = `${window.location.origin}/proposal/${id}`;
     navigator.clipboard.writeText(link);
     showToast('Link copied');
   };
 
   const shareWhatsApp = (p: Proposal) => {
-    const link = `${window.location.origin}${window.location.pathname}#/proposal/${p._id}`;
+    const link = `${window.location.origin}/proposal/${p._id}`;
     const name = clientName(p);
     const msg = `Hi ${name}, please review my proposal *${p.proposalNumber}: ${p.title}*.\n\nReview and respond here: ${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');

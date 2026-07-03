@@ -188,7 +188,7 @@ const ClientPortal: React.FC = () => {
                   {canPay && (
                     <div className="border-t border-white/5 px-5 py-3">
                       <a
-                        href={`${window.location.origin}${window.location.pathname.replace(/\/portal\/.*/, '')}#/invoice/${inv._id}`}
+                        href={`${window.location.origin}/invoice/${inv._id}`}
                         className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-extrabold text-white transition-all active:scale-95"
                         style={{ background: accent }}
                       >
@@ -201,7 +201,7 @@ const ClientPortal: React.FC = () => {
                   {inv.status === 'paid' && (
                     <div className="border-t border-white/5 px-5 py-3">
                       <a
-                        href={`${window.location.origin}${window.location.pathname.replace(/\/portal\/.*/, '')}#/invoice/${inv._id}`}
+                        href={`${window.location.origin}/invoice/${inv._id}`}
                         className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-500/10"
                       >
                         <i className="fas fa-receipt text-xs" />
@@ -245,7 +245,7 @@ const ClientPortal: React.FC = () => {
                   {canRespond && (
                     <div className="border-t border-white/5 px-5 py-3">
                       <a
-                        href={`${window.location.origin}${window.location.pathname.replace(/\/portal\/.*/, '')}#/proposal/${p._id}`}
+                        href={`${window.location.origin}/proposal/${p._id}`}
                         className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-extrabold text-white transition-all active:scale-95"
                         style={{ background: accent }}
                       >
