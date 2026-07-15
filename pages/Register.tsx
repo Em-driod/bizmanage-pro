@@ -162,6 +162,17 @@ const Register: React.FC = () => {
               </button>
             </form>
           ) : (
+          <>
+          <div className="mb-8">
+            <GoogleSignInButton onCredential={handleGoogleCredential} />
+          </div>
+
+          <div className="mb-8 flex items-center gap-4">
+            <div className="flex-1 h-px bg-slate-100" />
+            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">or</span>
+            <div className="flex-1 h-px bg-slate-100" />
+          </div>
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -257,20 +268,7 @@ const Register: React.FC = () => {
               ) : 'Create Account'}
             </button>
           </form>
-          )}
-
-          {!googleIdToken && (
-            <>
-              <div className="mt-8 flex items-center gap-4">
-                <div className="flex-1 h-px bg-slate-100" />
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">or</span>
-                <div className="flex-1 h-px bg-slate-100" />
-              </div>
-
-              <div className="mt-6">
-                <GoogleSignInButton onCredential={handleGoogleCredential} />
-              </div>
-            </>
+          </>
           )}
 
           <div className="mt-12 text-center pt-8 border-t border-slate-50">

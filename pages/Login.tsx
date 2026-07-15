@@ -79,6 +79,16 @@ const Login: React.FC = () => {
             </div>
           )}
 
+          <div className="mb-8">
+            <GoogleSignInButton onCredential={handleGoogleCredential} />
+          </div>
+
+          <div className="mb-8 flex items-center gap-4">
+            <div className="flex-1 h-px bg-slate-100" />
+            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">or</span>
+            <div className="flex-1 h-px bg-slate-100" />
+          </div>
+
           <form className="space-y-8" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-2">Email</label>
@@ -122,16 +132,6 @@ const Login: React.FC = () => {
               ) : 'Sign In'}
             </button>
           </form>
-
-          <div className="mt-8 flex items-center gap-4">
-            <div className="flex-1 h-px bg-slate-100" />
-            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">or</span>
-            <div className="flex-1 h-px bg-slate-100" />
-          </div>
-
-          <div className="mt-6">
-            <GoogleSignInButton onCredential={handleGoogleCredential} />
-          </div>
 
           <div className="mt-12 text-center pt-8 border-t border-slate-50">
             <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
