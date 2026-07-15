@@ -181,20 +181,23 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   <div key={group.label}>
                     <button
                       onClick={() => toggleGroup(group.label)}
-                      className={`w-full flex items-center justify-between px-3 py-2 mb-1 rounded-xl cursor-pointer group transition-all ${
+                      className={`w-full flex items-center justify-between px-3 py-2.5 mb-1 rounded-xl cursor-pointer group transition-all ${
                         isCollapsed
-                          ? 'bg-indigo-50 hover:bg-indigo-100 border border-indigo-200'
+                          ? 'bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm'
                           : 'hover:bg-slate-100 border border-transparent'
                       }`}
                     >
                       <span className={`text-[11px] font-extrabold uppercase tracking-widest transition-colors ${
-                        hasActive ? 'text-indigo-600' : isCollapsed ? 'text-indigo-500' : 'text-slate-500 group-hover:text-slate-700'
+                        hasActive ? 'text-indigo-600' : isCollapsed ? 'text-indigo-600' : 'text-slate-500 group-hover:text-slate-700'
                       }`}>
                         {group.label}
+                        {isCollapsed && <span className="ml-1.5 font-bold normal-case tracking-normal text-indigo-400">({group.items.length})</span>}
                       </span>
-                      <span className={`flex items-center gap-1.5 transition-colors ${isCollapsed ? 'text-indigo-500' : 'text-slate-400 group-hover:text-slate-600'}`}>
-                        <span className={`text-[9px] font-bold ${isCollapsed ? 'text-indigo-400' : 'hidden'}`}>show</span>
-                        <i className={`fas fa-chevron-${isCollapsed ? 'down' : 'up'} text-[10px]`}></i>
+                      <span className={`flex items-center gap-1.5 transition-colors ${isCollapsed ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
+                        <span className={`text-[10px] font-bold ${isCollapsed ? 'text-indigo-500' : 'hidden'}`}>Click to view</span>
+                        <span className={`w-5 h-5 flex items-center justify-center rounded-full transition-colors ${isCollapsed ? 'bg-indigo-500 text-white' : ''}`}>
+                          <i className={`fas fa-chevron-${isCollapsed ? 'down' : 'up'} text-[9px]`}></i>
+                        </span>
                       </span>
                     </button>
 
