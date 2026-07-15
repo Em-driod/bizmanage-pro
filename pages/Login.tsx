@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest, getErrorMessage } from '../services/api';
 import { User } from '../types';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -12,6 +13,29 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleGoogleCredential = useCallback(async (idToken: string) => {
+    setError('');
+    try {
+      const data = await apiRequest<
+        (User & { token: string }) | { needsBusinessName: true; googleIdToken: string }
+      >('/users/google', {
+        method: 'POST',
+        body: { idToken },
+      });
+
+      if ('needsBusinessName' in data) {
+        navigate('/register', { state: { googleIdToken: data.googleIdToken } });
+        return;
+      }
+
+      const { token, ...userWithoutToken } = data;
+      login(userWithoutToken as User, token);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  }, [login, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +122,16 @@ const Login: React.FC = () => {
               ) : 'Sign In'}
             </button>
           </form>
+
+          <div className="mt-8 flex items-center gap-4">
+            <div className="flex-1 h-px bg-slate-100" />
+            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">or</span>
+            <div className="flex-1 h-px bg-slate-100" />
+          </div>
+
+          <div className="mt-6">
+            <GoogleSignInButton onCredential={handleGoogleCredential} />
+          </div>
 
           <div className="mt-12 text-center pt-8 border-t border-slate-50">
             <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">

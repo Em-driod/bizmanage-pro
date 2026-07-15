@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { apiRequest, getErrorMessage } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const Register: React.FC = () => {
+  const location = useLocation();
+  const googleIdToken = (location.state as { googleIdToken?: string } | null)?.googleIdToken;
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,6 +22,49 @@ const Register: React.FC = () => {
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleGoogleCredential = useCallback(async (idToken: string) => {
+    setError('');
+    try {
+      const data = await apiRequest<
+        (User & { token: string }) | { needsBusinessName: true; googleIdToken: string }
+      >('/users/google', {
+        method: 'POST',
+        body: { idToken },
+      });
+
+      if ('needsBusinessName' in data) {
+        navigate('/register', { state: { googleIdToken: data.googleIdToken }, replace: true });
+        return;
+      }
+
+      const { token, ...userWithoutToken } = data;
+      login(userWithoutToken as User, token);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  }, [login, navigate]);
+
+  const handleGoogleSignupComplete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!googleIdToken) return;
+    setIsLoading(true);
+    setError('');
+    try {
+      const data = await apiRequest<User & { token: string }>('/users/google/complete', {
+        method: 'POST',
+        body: { idToken: googleIdToken, businessName: formData.businessName },
+      });
+      const { token, ...user } = data;
+      login(user, token);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +133,35 @@ const Register: React.FC = () => {
             </div>
           )}
 
+          {googleIdToken ? (
+            <form className="space-y-6" onSubmit={handleGoogleSignupComplete}>
+              <p className="text-slate-500 font-medium text-sm text-center -mt-2">
+                Almost there — what's your business called?
+              </p>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] ml-2">Business Name</label>
+                <input
+                  type="text" required autoFocus
+                  placeholder="Acme Ltd."
+                  className="w-full px-6 py-5 bg-white border border-slate-100 rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none font-bold text-slate-700 placeholder:text-slate-300"
+                  value={formData.businessName}
+                  onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-6 mt-4 bg-indigo-600 text-white rounded-[2rem] font-black text-sm uppercase tracking-[3px] hover:bg-indigo-700 shadow-2xl shadow-indigo-200 transition-all hover:-translate-y-1 active:scale-95 disabled:bg-slate-200 disabled:shadow-none disabled:translate-y-0"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-4">
+                    <div className="w-5 h-5 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                    Creating account...
+                  </div>
+                ) : 'Continue'}
+              </button>
+            </form>
+          ) : (
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -181,6 +257,21 @@ const Register: React.FC = () => {
               ) : 'Create Account'}
             </button>
           </form>
+          )}
+
+          {!googleIdToken && (
+            <>
+              <div className="mt-8 flex items-center gap-4">
+                <div className="flex-1 h-px bg-slate-100" />
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">or</span>
+                <div className="flex-1 h-px bg-slate-100" />
+              </div>
+
+              <div className="mt-6">
+                <GoogleSignInButton onCredential={handleGoogleCredential} />
+              </div>
+            </>
+          )}
 
           <div className="mt-12 text-center pt-8 border-t border-slate-50">
             <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
