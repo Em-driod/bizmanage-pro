@@ -11,6 +11,7 @@ const Payrolls: React.FC = () => {
   const [editingPayrollId, setEditingPayrollId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkConfirm, setIsBulkConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -140,6 +141,8 @@ const Payrolls: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       if (editingPayrollId) {
         await apiRequest(`/payrolls/${editingPayrollId}`, { method: 'PUT', body: formData });
@@ -150,6 +153,8 @@ const Payrolls: React.FC = () => {
       fetchData();
     } catch (err: any) {
       alert(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -431,7 +436,7 @@ const Payrolls: React.FC = () => {
               </div>
               <div className="flex gap-3 mt-6">
                 <button type="button" onClick={closeModal} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm hover:bg-slate-50 transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 shadow-sm transition-colors">{editingPayrollId ? 'Update Entry' : 'Save Entry'}</button>
+                <button type="submit" disabled={isSubmitting} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{isSubmitting ? 'Saving...' : editingPayrollId ? 'Update Entry' : 'Save Entry'}</button>
               </div>
             </form>
           </div>

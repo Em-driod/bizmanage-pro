@@ -98,6 +98,8 @@ const Transactions: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const dataToSend: any = { ...formData };
       if (dataToSend.clientId === '') dataToSend.clientId = null;
@@ -113,6 +115,8 @@ const Transactions: React.FC = () => {
       fetchData();
     } catch (err) {
       alert('Error: ' + getErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -665,9 +669,10 @@ const Transactions: React.FC = () => {
               </div>
               <button
                 type="submit"
-                className="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold"
+                disabled={isSubmitting}
+                className="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isEditing ? 'Update Entry' : 'Create Entry'}
+                {isSubmitting ? 'Saving...' : isEditing ? 'Update Entry' : 'Create Entry'}
               </button>
             </form>
           </div>
