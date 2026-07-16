@@ -74,11 +74,26 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, data, icon, color, isLoading }
 };
 
 /* ─── Custom SVG Area Chart ─────────────────────────────────────── */
+interface PerfChartPoint {
+  month?: string;
+  isProjection?: boolean;
+  totalIncome?: number;
+  totalExpenses?: number;
+  projIncome?: number;
+  projExpenses?: number;
+}
+
+interface PerfChartFilter {
+  year: number;
+  month: string;
+  interval: '6m' | '1y' | '1m';
+}
+
 const PerfChart: React.FC<{
-  data: any[];
+  data: PerfChartPoint[];
   isLoading: boolean;
-  filter: any;
-  onFilterChange: (f: any) => void;
+  filter: PerfChartFilter;
+  onFilterChange: (f: PerfChartFilter) => void;
   formatCurrency: (v: number) => string;
 }> = ({ data, isLoading, filter, onFilterChange, formatCurrency }) => {
   const svgRef = React.useRef<SVGSVGElement>(null);
@@ -100,8 +115,8 @@ const PerfChart: React.FC<{
   const W = dims.w - PAD.left - PAD.right;
   const H = dims.h - PAD.top - PAD.bottom;
 
-  const historical = data.filter((d: any) => !d.isProjection);
-  const allVals = data.flatMap((d: any) => [d.totalIncome ?? 0, d.totalExpenses ?? 0, d.projIncome ?? 0, d.projExpenses ?? 0]);
+  const historical = data.filter((d: PerfChartPoint) => !d.isProjection);
+  const allVals = data.flatMap((d: PerfChartPoint) => [d.totalIncome ?? 0, d.totalExpenses ?? 0, d.projIncome ?? 0, d.projExpenses ?? 0]);
   const maxVal = Math.max(...allVals, 1);
 
   const xPos = (i: number, total: number) => PAD.left + (i / Math.max(total - 1, 1)) * W;
@@ -127,25 +142,25 @@ const PerfChart: React.FC<{
     return `${line} L ${last[0]} ${bottom} L ${first[0]} ${bottom} Z`;
   };
 
-  const incomePoints: [number, number][] = historical.map((d: any, i: number) => [xPos(i, historical.length), yPos(d.totalIncome ?? 0)]);
-  const expensePoints: [number, number][] = historical.map((d: any, i: number) => [xPos(i, historical.length), yPos(d.totalExpenses ?? 0)]);
+  const incomePoints: [number, number][] = historical.map((d: PerfChartPoint, i: number) => [xPos(i, historical.length), yPos(d.totalIncome ?? 0)]);
+  const expensePoints: [number, number][] = historical.map((d: PerfChartPoint, i: number) => [xPos(i, historical.length), yPos(d.totalExpenses ?? 0)]);
 
-  const projData = data.filter((d: any) => d.isProjection);
+  const projData = data.filter((d: PerfChartPoint) => d.isProjection);
   const projStart = historical.length - 1;
   const projIncomePoints: [number, number][] = [
     [xPos(projStart, data.length), yPos(historical[projStart]?.totalIncome ?? 0)],
-    ...projData.map((d: any, i: number) => [xPos(projStart + 1 + i, data.length), yPos(d.projIncome ?? 0)] as [number, number]),
+    ...projData.map((d: PerfChartPoint, i: number) => [xPos(projStart + 1 + i, data.length), yPos(d.projIncome ?? 0)] as [number, number]),
   ];
   const projExpensePoints: [number, number][] = [
     [xPos(projStart, data.length), yPos(historical[projStart]?.totalExpenses ?? 0)],
-    ...projData.map((d: any, i: number) => [xPos(projStart + 1 + i, data.length), yPos(d.projExpenses ?? 0)] as [number, number]),
+    ...projData.map((d: PerfChartPoint, i: number) => [xPos(projStart + 1 + i, data.length), yPos(d.projExpenses ?? 0)] as [number, number]),
   ];
 
   const bottom = PAD.top + H;
   const gridVals = [0, 0.25, 0.5, 0.75, 1].map(f => maxVal * f);
 
-  const totalIncome = historical.reduce((s: number, d: any) => s + (d.totalIncome ?? 0), 0);
-  const totalExpenses = historical.reduce((s: number, d: any) => s + (d.totalExpenses ?? 0), 0);
+  const totalIncome = historical.reduce((s: number, d: PerfChartPoint) => s + (d.totalIncome ?? 0), 0);
+  const totalExpenses = historical.reduce((s: number, d: PerfChartPoint) => s + (d.totalExpenses ?? 0), 0);
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -264,7 +279,7 @@ const PerfChart: React.FC<{
             })}
 
             {/* X labels */}
-            {data.map((d: any, i: number) => (
+            {data.map((d: PerfChartPoint, i: number) => (
               <text key={i} x={xPos(i, data.length)} y={bottom + 18} textAnchor="middle" fill="#94a3b8" fontSize="10" fontWeight="700">
                 {d.month}
               </text>
@@ -385,12 +400,12 @@ const Dashboard: React.FC = () => {
     netProfit: { value: 0, trend: [] },
     totalClients: { value: 0, trend: [] },
   });
-  const [chartData, setChartData] = useState([]);
+  const [chartData, setChartData] = useState<PerfChartPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isChartLoading, setIsChartLoading] = useState(true);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [showScanSuccess, setShowScanSuccess] = useState(false);
-  const [filter, setFilter] = useState({
+  const [filter, setFilter] = useState<PerfChartFilter>({
     year: new Date().getFullYear(),
     month: '',
     interval: '6m'
@@ -449,7 +464,7 @@ const Dashboard: React.FC = () => {
         } else if (filter.interval === '1m' && filter.year && filter.month) {
           query = `?year=${filter.year}&month=${filter.month}`;
         }
-        const chartData = await apiRequest<any>(`/dashboard/chart-data${query}`);
+        const chartData = await apiRequest<PerfChartPoint[]>(`/dashboard/chart-data${query}`);
         setChartData(chartData);
       } catch (err) {
         console.error('Error fetching dashboard chart data', err);
@@ -462,21 +477,21 @@ const Dashboard: React.FC = () => {
 
   // Real-time Event Listener
   useEffect(() => {
-    const handleDataUpdate = (_e: any) => {
+    const handleDataUpdate = () => {
       // Re-fetch data behind the scenes to keep dashboard live
-      apiRequest<any>('/dashboard/kpis').then(setKpis).catch(console.error);
+      apiRequest<typeof kpis>('/dashboard/kpis').then(setKpis).catch(console.error);
 
       let query = '';
       if (filter.interval === '1y' && filter.year) query = `?year=${filter.year}`;
       else if (filter.interval === '1m' && filter.year && filter.month) query = `?year=${filter.year}&month=${filter.month}`;
-      apiRequest<any>(`/dashboard/chart-data${query}`).then(setChartData).catch(console.error);
+      apiRequest<PerfChartPoint[]>(`/dashboard/chart-data${query}`).then(setChartData).catch(console.error);
     };
 
     window.addEventListener('MorniyDataUpdate', handleDataUpdate);
     return () => window.removeEventListener('MorniyDataUpdate', handleDataUpdate);
   }, [filter]);
 
-  const handleScanComplete = async (data: any) => {
+  const handleScanComplete = async (data: { transactions?: unknown[]; text?: string }) => {
     setIsScanModalOpen(false);
     try {
       if (data.transactions && data.transactions.length > 0) {
@@ -502,7 +517,7 @@ const Dashboard: React.FC = () => {
   const advisorMetrics = advisorData?.metrics ?? null;
 
   // Enhance chart data with projections if we have advisor metrics
-  const enhancedChartData = chartData.map((item: any, index: number) => {
+  const enhancedChartData: PerfChartPoint[] = chartData.map((item, index) => {
     const isLastHistorical = index === chartData.length - 1;
     return {
       ...item,
@@ -512,9 +527,9 @@ const Dashboard: React.FC = () => {
   });
 
   if (advisorMetrics && chartData.length > 0 && filter.interval === '6m') {
-    const lastMonth = chartData[chartData.length - 1] as any;
+    const lastMonth = chartData[chartData.length - 1]!;
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const lastMonthIdx = months.indexOf(lastMonth.month);
+    const lastMonthIdx = months.indexOf(lastMonth.month ?? '');
 
     for (let i = 1; i <= 2; i++) {
       enhancedChartData.push({
