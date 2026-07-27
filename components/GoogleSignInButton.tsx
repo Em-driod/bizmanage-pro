@@ -15,10 +15,13 @@ declare global {
 
 interface GoogleSignInButtonProps {
   onCredential: (idToken: string) => void;
+  isProcessing?: boolean;
 }
 
-const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onCredential }) => {
+const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onCredential, isProcessing = false }) => {
   const buttonRef = useRef<HTMLDivElement>(null);
+  const processingRef = useRef(isProcessing);
+  processingRef.current = isProcessing;
 
   useEffect(() => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -30,7 +33,10 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onCredential })
       if (cancelled || !window.google || !buttonRef.current) return;
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: (response) => onCredential(response.credential),
+        callback: (response) => {
+          if (processingRef.current) return;
+          onCredential(response.credential);
+        },
       });
       window.google.accounts.id.renderButton(buttonRef.current, {
         theme: 'outline',
@@ -60,7 +66,16 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({ onCredential })
     };
   }, [onCredential]);
 
-  return <div ref={buttonRef} className="flex justify-center" />;
+  return (
+    <div className="relative flex justify-center">
+      <div ref={buttonRef} className={isProcessing ? 'pointer-events-none opacity-50' : ''} />
+      {isProcessing && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-5 h-5 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default GoogleSignInButton;

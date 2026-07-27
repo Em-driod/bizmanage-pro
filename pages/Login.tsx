@@ -10,12 +10,14 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleGoogleCredential = useCallback(async (idToken: string) => {
     setError('');
+    setIsGoogleLoading(true);
     try {
       const data = await apiRequest<
         (User & { token: string }) | { needsBusinessName: true; googleIdToken: string }
@@ -34,6 +36,8 @@ const Login: React.FC = () => {
       navigate('/dashboard');
     } catch (err) {
       setError(getErrorMessage(err));
+    } finally {
+      setIsGoogleLoading(false);
     }
   }, [login, navigate]);
 
@@ -80,7 +84,12 @@ const Login: React.FC = () => {
           )}
 
           <div className="mb-8">
-            <GoogleSignInButton onCredential={handleGoogleCredential} />
+            <GoogleSignInButton onCredential={handleGoogleCredential} isProcessing={isGoogleLoading} />
+            {isGoogleLoading && (
+              <p className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4">
+                Signing in… this can take a moment if the server was idle
+              </p>
+            )}
           </div>
 
           <div className="mb-8 flex items-center gap-4">
