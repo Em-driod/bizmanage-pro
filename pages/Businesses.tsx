@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { Business } from '../types';
 import { apiRequest } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -65,6 +66,7 @@ const BusinessPage: React.FC = () => {
   const [profileSaved, setProfileSaved] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
 
   useEffect(() => {
     const fetchBusiness = async () => {
@@ -112,6 +114,13 @@ const BusinessPage: React.FC = () => {
     } catch (err: any) { alert(err.message); }
     finally { setProfileSaving(false); }
   };
+
+  useEffect(() => {
+    if (!shareUrl) { setQrDataUrl(''); return; }
+    QRCode.toDataURL(shareUrl, { width: 240, margin: 1, color: { dark: profile.accentColor || '#0f172a', light: '#ffffff' } })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(''));
+  }, [shareUrl, profile.accentColor]);
 
   const copyShareUrl = () => {
     navigator.clipboard.writeText(shareUrl);
@@ -364,21 +373,53 @@ const BusinessPage: React.FC = () => {
               </button>
             </div>
             {profile.isPublic && shareUrl && (
-              <div className="relative z-10 mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white/15 border border-white/20 rounded-xl px-3 py-2.5 backdrop-blur-sm">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <i className="fas fa-link text-white/60 text-xs shrink-0" />
-                  <span className="text-xs text-white/90 flex-1 truncate font-mono">{shareUrl}</span>
+              <div className="relative z-10 mt-4 space-y-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white/15 border border-white/20 rounded-xl px-3 py-2.5 backdrop-blur-sm">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <i className="fas fa-link text-white/60 text-xs shrink-0" />
+                    <span className="text-xs text-white/90 flex-1 truncate font-mono">{shareUrl}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button type="button" onClick={copyShareUrl}
+                      className="flex-1 sm:flex-none text-xs font-black text-white bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-all border border-white/10 text-center">
+                      {copied ? '✓ Copied' : 'Copy Link'}
+                    </button>
+                    <a href={shareUrl} target="_blank" rel="noreferrer"
+                      className="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-lg transition-all border border-white/10 flex-shrink-0">
+                      <i className="fas fa-external-link-alt text-white text-[10px]"></i>
+                    </a>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button type="button" onClick={copyShareUrl}
-                    className="flex-1 sm:flex-none text-xs font-black text-white bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-all border border-white/10 text-center">
-                    {copied ? '✓ Copied' : 'Copy Link'}
-                  </button>
-                  <a href={shareUrl} target="_blank" rel="noreferrer"
-                    className="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-lg transition-all border border-white/10 flex-shrink-0">
-                    <i className="fas fa-external-link-alt text-white text-[10px]"></i>
-                  </a>
-                </div>
+                {qrDataUrl && (
+                  <div className="bg-white/15 border border-white/20 rounded-xl px-4 py-4 backdrop-blur-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="relative shrink-0">
+                        <img src={qrDataUrl} alt="QR code for public profile" className="w-24 h-24 rounded-lg bg-white p-1.5" />
+                        <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-lg overflow-hidden border-2 border-white shadow-md bg-slate-200 flex items-center justify-center"
+                          style={{ background: profile.logoImage ? undefined : profile.accentColor }}>
+                          {profile.logoImage
+                            ? <img src={profile.logoImage} alt="logo" className="w-full h-full object-cover" />
+                            : <span className="text-white text-[10px] font-black">{initials[0]}</span>}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black text-white truncate">{business?.name || 'Your Business'}</p>
+                        {profile.tagline && <p className="text-[11px] text-white/60 truncate mt-0.5">{profile.tagline}</p>}
+                        <p className="text-[10px] text-white/40 mt-1">
+                          {profile.services.length > 0 ? `${profile.services.length} item${profile.services.length !== 1 ? 's' : ''} showing` : 'Add items below to fill out the page'}
+                        </p>
+                        <a href={qrDataUrl} download={`${(business?.name || 'business').replace(/\s+/g, '-').toLowerCase()}-qr-code.png`}
+                          className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-black text-white bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-all border border-white/10">
+                          <i className="fas fa-download text-[10px]"></i> Download QR
+                        </a>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-white/40 mt-3 pt-3 border-t border-white/10 leading-relaxed">
+                      <i className="fas fa-circle-info mr-1"></i>
+                      This code never changes — the page it opens updates instantly the moment you save changes here, so you only ever need to print or share it once.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

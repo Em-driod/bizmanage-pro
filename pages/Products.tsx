@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
+import QrScannerModal from '../components/QrScannerModal';
 
 export interface Product {
   _id: string;
@@ -32,6 +33,7 @@ const Products: React.FC = () => {
   const [toast, setToast] = useState('');
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -164,6 +166,14 @@ const Products: React.FC = () => {
               className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => setShowScanner(true)}
+            title="Scan barcode / QR to search"
+            className="flex items-center gap-2 px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <i className="fas fa-qrcode text-indigo-500" /> Scan
+          </button>
           {categories.length > 0 && (
             <select
               value={filterCat}
@@ -359,6 +369,16 @@ const Products: React.FC = () => {
           </div>
         </div>
       )}
+
+      <QrScannerModal
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onResult={(text) => {
+          setSearch(text);
+          setShowScanner(false);
+        }}
+        title="Scan Product Barcode / QR"
+      />
     </div>
   );
 };

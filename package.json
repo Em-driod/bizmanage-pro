@@ -17,8 +17,10 @@
     "dompurify": "^3.3.3",
     "framer-motion": "^12.29.2",
     "html-to-image": "^1.11.13",
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.563.0",
     "marked": "^18.0.0",
+    "qrcode": "^1.5.4",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-router-dom": "^7.11.0",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/qrcode": "^1.5.6",
     "@types/react-dom": "^19.2.3",
     "@types/recharts": "^1.8.29",
     "@vitejs/plugin-react": "^5.0.0",

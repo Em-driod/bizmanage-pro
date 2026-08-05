@@ -6,6 +6,7 @@ import { apiRequest } from '../services/api';
 import { usePrint } from '../context/PrintContext';
 import ReceiptPrint from './ReceiptPrint';
 import SearchModal from './SearchModal';
+import QrScannerModal from './QrScannerModal';
 
 interface Notification {
   _id: string;
@@ -64,6 +65,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({ More: true });
   const [showFab, setShowFab] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -390,6 +392,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <div className="lg:hidden fixed bottom-20 right-4 z-50">
         {showFab && (
           <div className="absolute bottom-14 right-0 flex flex-col items-end gap-2 mb-1">
+            <button
+              onClick={() => { setIsScannerOpen(true); setShowFab(false); }}
+              className="flex items-center gap-2.5 px-4 py-2.5 bg-slate-800 text-white rounded-2xl shadow-lg text-sm font-bold whitespace-nowrap"
+            >
+              <i className="fas fa-qrcode text-xs"></i>
+              Scan QR
+            </button>
             {[
               { label: 'New Invoice', icon: 'fa-file-invoice', path: '/invoices', color: 'bg-indigo-600' },
               { label: 'Add Transaction', icon: 'fa-receipt', path: '/transactions', color: 'bg-emerald-600' },
@@ -422,6 +431,23 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         />
       )}
       {isSearchOpen && <SearchModal onClose={() => setIsSearchOpen(false)} />}
+      <QrScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onResult={(text) => {
+          setIsScannerOpen(false);
+          if (text.startsWith(window.location.origin)) {
+            const hashPath = text.split('#')[1];
+            if (hashPath) { navigate(hashPath); return; }
+          }
+          if (/^https?:\/\//i.test(text)) {
+            window.open(text, '_blank', 'noreferrer');
+          } else {
+            navigator.clipboard?.writeText(text).catch(() => {});
+            alert(`Scanned: ${text}\n(copied to clipboard)`);
+          }
+        }}
+      />
     </div>
   );
 };
