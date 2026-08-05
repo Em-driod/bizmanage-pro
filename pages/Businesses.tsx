@@ -79,8 +79,7 @@ const BusinessPage: React.FC = () => {
           setProfile({ ...emptyProfile, ...data.profile, services: data.profile.services || [], coverImage: data.profile.coverImage || '', logoImage: data.profile.logoImage || '', accentColor: data.profile.accentColor || '#6366f1', bankName: data.profile.bankName || '', accountNumber: data.profile.accountNumber || '', accountName: data.profile.accountName || '', bankName2: data.profile.bankName2 || '', accountNumber2: data.profile.accountNumber2 || '', accountName2: data.profile.accountName2 || '' });
         }
         if (data.slug) {
-          const base = window.location.origin + window.location.pathname;
-          setShareUrl(`${base}#/biz/${data.slug}`);
+          setShareUrl(`${window.location.origin}/biz/${data.slug}`);
         }
       } catch {
         setBusiness({ _id: user.businessId, name: 'Sample Business', address: '', email: '', phone: '', currency: 'USD' } as any);
@@ -106,8 +105,7 @@ const BusinessPage: React.FC = () => {
     try {
       const data = await apiRequest<any>(`/businesses/${user?.businessId}/profile`, { method: 'PUT', body: profile });
       if (data.slug) {
-        const base = window.location.origin + window.location.pathname;
-        setShareUrl(`${base}#/biz/${data.slug}`);
+        setShareUrl(`${window.location.origin}/biz/${data.slug}`);
       }
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);

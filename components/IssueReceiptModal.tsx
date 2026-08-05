@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { toPng } from 'html-to-image';
+import QRCode from 'qrcode';
 import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,14 +14,20 @@ interface Transaction {
   clientId?: any;
 }
 
+interface ReceiptItem {
+  description: string;
+  amount: number;
+  transactionId?: string;
+}
+
 interface Props {
-  transaction: Transaction;
+  transactions: Transaction[];
   client?: Client | null;
   onClose: () => void;
   onCreated: (receipt: any) => void;
 }
 
-const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCreated }) => {
+const IssueReceiptModal: React.FC<Props> = ({ transactions, client, onClose, onCreated }) => {
   const { formatCurrency } = useCurrency();
   const { user } = useAuth();
   const [step, setStep] = useState<'form' | 'share'>('form');
@@ -30,18 +37,35 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
   const [receipt, setReceipt] = useState<any>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
 
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const txDate = (transaction as any).createdAt || (transaction as any).date || new Date().toISOString();
+  const latestDate = transactions.reduce<string | null>((latest, tx) => {
+    const d = (tx as any).createdAt || (tx as any).date;
+    if (!d) return latest;
+    return !latest || new Date(d) > new Date(latest) ? d : latest;
+  }, null);
+
+  const [items, setItems] = useState<ReceiptItem[]>(
+    transactions.map(tx => ({ description: tx.description || '', amount: tx.amount, transactionId: tx._id }))
+  );
+
   const [form, setForm] = useState({
     payerName: client?.name || '',
     payerEmail: client?.email || '',
     payerPhone: client?.phone || '',
-    description: transaction.description || '',
     notes: '',
-    date: new Date(txDate).toISOString().split('T')[0],
+    date: new Date(latestDate || Date.now()).toISOString().split('T')[0],
   });
+
+  const total = useMemo(() => items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0), [items]);
+
+  const updateItem = (i: number, field: keyof ReceiptItem, value: string) => {
+    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: field === 'amount' ? Number(value) || 0 : value } : it));
+  };
+  const removeItem = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i));
+  const addBlankItem = () => setItems(prev => [...prev, { description: '', amount: 0 }]);
 
   const generateImage = async (): Promise<{ dataUrl: string; file: File } | null> => {
     await new Promise(r => setTimeout(r, 150));
@@ -61,11 +85,18 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.payerName.trim()) return;
+    if (items.length === 0 || items.some(it => !it.description.trim())) return;
     setSaving(true);
     try {
       const data = await apiRequest<any>('/receipts', {
         method: 'POST',
-        body: { ...form, transactionId: transaction._id, amount: transaction.amount, date: form.date },
+        body: {
+          ...form,
+          items: items.map(({ description, amount }) => ({ description, amount })),
+          transactionIds: items.map(it => it.transactionId).filter(Boolean),
+          description: items.length === 1 ? items[0].description : `${items[0].description} + ${items.length - 1} more item${items.length - 1 !== 1 ? 's' : ''}`,
+          amount: total,
+        },
       });
       setReceipt(data);
       onCreated(data);
@@ -77,6 +108,17 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
     }
   };
 
+  const publicLink = receipt
+    ? `${window.location.origin}/receipt/${receipt.publicToken}`
+    : '';
+
+  useEffect(() => {
+    if (!publicLink) { setQrDataUrl(''); return; }
+    QRCode.toDataURL(publicLink, { width: 160, margin: 1, color: { dark: '#0f172a', light: '#ffffff' } })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(''));
+  }, [publicLink]);
+
   const handleShare = async () => {
     setIsSharing(true);
     try {
@@ -85,7 +127,6 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
       if (navigator.canShare && navigator.canShare({ files: [img.file] })) {
         await navigator.share({ files: [img.file], title: `Receipt ${receipt?.receiptNumber}` });
       } else {
-        // Desktop: download the image
         const a = document.createElement('a');
         a.href = img.dataUrl;
         a.download = `receipt-${receipt?.receiptNumber}.png`;
@@ -127,10 +168,6 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
     }
   };
 
-  const publicLink = receipt
-    ? `${window.location.origin}/receipt/${receipt.publicToken}`
-    : '';
-
   const formattedDate = form.date
     ? new Date(form.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     : '';
@@ -149,10 +186,10 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
             </div>
             <div>
               <h3 className="text-base font-black text-white">
-                {step === 'form' ? 'Issue Receipt' : `Receipt ${receipt?.receiptNumber}`}
+                {step === 'form' ? `Issue Receipt${items.length > 1 ? ` · ${items.length} items` : ''}` : `Receipt ${receipt?.receiptNumber}`}
               </h3>
               <p className="text-[11px] text-emerald-100">
-                {step === 'form' ? formatCurrency(transaction.amount) : 'Ready to share'}
+                {step === 'form' ? formatCurrency(total) : 'Ready to share'}
               </p>
             </div>
           </div>
@@ -165,10 +202,48 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
           {step === 'form' ? (
             <form onSubmit={handleCreate} className="p-6 space-y-4">
 
-              {/* Amount banner */}
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 flex items-center justify-between">
-                <p className="text-xs font-bold text-emerald-700">Amount</p>
-                <p className="text-lg font-black text-emerald-700">{formatCurrency(transaction.amount)}</p>
+              {/* Itemized list */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">Items *</label>
+                  <button type="button" onClick={addBlankItem} className="text-[11px] font-black text-emerald-600 hover:text-emerald-700">
+                    <i className="fas fa-plus mr-1"></i>Add line
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {items.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl p-2">
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Web design services"
+                        value={item.description}
+                        onChange={e => updateItem(i, 'description', e.target.value)}
+                        className="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-400 outline-none"
+                      />
+                      <input
+                        type="number"
+                        required
+                        placeholder="0"
+                        value={item.amount || ''}
+                        onChange={e => updateItem(i, 'amount', e.target.value)}
+                        className="w-24 shrink-0 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-400 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeItem(i)}
+                        disabled={items.length === 1}
+                        className="w-7 h-7 shrink-0 flex items-center justify-center text-slate-300 hover:text-rose-500 disabled:opacity-20 transition-colors"
+                      >
+                        <i className="fas fa-trash text-xs"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between items-center px-1 mt-2">
+                  <span className="text-xs font-bold text-slate-500">Total</span>
+                  <span className="text-sm font-black text-emerald-700">{formatCurrency(total)}</span>
+                </div>
               </div>
 
               {/* Pre-fill notice */}
@@ -201,13 +276,6 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Payment For *</label>
-                <input type="text" required placeholder="e.g. Web design services, Rent payment..." value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 outline-none" />
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Date</label>
@@ -237,37 +305,50 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
             <div className="p-6 space-y-4">
 
               {/* Hidden receipt card for image capture */}
-              <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '440px' }} aria-hidden="true">
-                <div ref={cardRef} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#0f172a', width: '440px', padding: '0' }}>
+              <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '460px' }} aria-hidden="true">
+                <div ref={cardRef} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#0f172a', width: '460px', padding: '0' }}>
 
                   {/* Top accent bar */}
-                  <div style={{ height: '4px', background: 'linear-gradient(90deg, #059669, #10b981, #34d399)' }} />
+                  <div style={{ height: '5px', background: 'linear-gradient(90deg, #059669, #10b981, #34d399)' }} />
 
                   {/* Header */}
-                  <div style={{ padding: '32px 36px 24px', background: '#0f172a' }}>
+                  <div style={{ padding: '32px 36px 22px', background: '#0f172a' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
                         <p style={{ margin: '0 0 6px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: '#475569' }}>Official Receipt</p>
-                        <p style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: '#f8fafc', letterSpacing: '-0.5px' }}>{user?.businessName || 'Morniy Business'}</p>
+                        <p style={{ margin: 0, fontSize: '19px', fontWeight: 900, color: '#f8fafc', letterSpacing: '-0.5px' }}>{user?.businessName || 'Morniy Business'}</p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: '#475569' }}>Receipt</p>
-                        <p style={{ margin: 0, fontSize: '15px', fontWeight: 900, color: '#34d399', letterSpacing: '0.5px' }}>{receipt?.receiptNumber}</p>
+                        <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: '#475569' }}>Receipt No.</p>
+                        <p style={{ margin: 0, fontSize: '13px', fontWeight: 900, color: '#34d399', letterSpacing: '0.5px', fontFamily: 'monospace' }}>{receipt?.receiptNumber}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Amount hero */}
-                  <div style={{ margin: '0 36px 24px', background: 'linear-gradient(135deg, #064e3b, #065f46)', borderRadius: '16px', padding: '24px 28px', position: 'relative', overflow: 'hidden' }}>
-                    {/* decorative circle */}
+                  <div style={{ margin: '0 36px 22px', background: 'linear-gradient(135deg, #064e3b, #065f46)', borderRadius: '16px', padding: '22px 28px', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(52,211,153,0.1)' }} />
-                    <p style={{ margin: '0 0 6px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: 'rgba(52,211,153,0.7)' }}>Amount Received</p>
-                    <p style={{ margin: 0, fontSize: '36px', fontWeight: 900, color: '#ffffff', letterSpacing: '-1px', lineHeight: 1 }}>{formatCurrency(transaction.amount)}</p>
+                    <p style={{ margin: '0 0 6px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: 'rgba(52,211,153,0.7)' }}>Total Amount Received</p>
+                    <p style={{ margin: 0, fontSize: '34px', fontWeight: 900, color: '#ffffff', letterSpacing: '-1px', lineHeight: 1 }}>{formatCurrency(total)}</p>
                     <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <span style={{ color: '#fff', fontSize: '10px', fontWeight: 900 }}>✓</span>
                       </div>
                       <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'rgba(52,211,153,0.8)' }}>Payment Confirmed</p>
+                    </div>
+                  </div>
+
+                  {/* From / Date row */}
+                  <div style={{ padding: '0 36px 18px', display: 'flex', justifyContent: 'space-between' }}>
+                    <div>
+                      <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>Received From</p>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#f1f5f9' }}>{form.payerName}</p>
+                      {form.payerPhone && <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#64748b' }}>{form.payerPhone}</p>}
+                      {form.payerEmail && <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b' }}>{form.payerEmail}</p>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>Date</p>
+                      <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>{formattedDate}</p>
                     </div>
                   </div>
 
@@ -278,40 +359,43 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
                     <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#1e293b', flexShrink: 0 }} />
                   </div>
 
-                  {/* Details */}
-                  <div style={{ padding: '20px 36px 28px', background: '#0f172a' }}>
-                    {/* From / Date row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                      <div>
-                        <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>Received From</p>
-                        <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#f1f5f9' }}>{form.payerName}</p>
-                        {form.payerPhone && <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#64748b' }}>{form.payerPhone}</p>}
-                        {form.payerEmail && <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b' }}>{form.payerEmail}</p>}
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>Date</p>
-                        <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>{formattedDate}</p>
-                      </div>
+                  {/* Itemized list */}
+                  <div style={{ padding: '20px 36px 8px', background: '#0f172a' }}>
+                    <p style={{ margin: '0 0 10px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>
+                      {items.length} Item{items.length !== 1 ? 's' : ''}
+                    </p>
+                    <div style={{ background: '#1e293b', borderRadius: '12px', overflow: 'hidden' }}>
+                      {items.map((item, i) => (
+                        <div key={i} style={{
+                          display: 'flex', justifyContent: 'space-between', gap: '12px',
+                          padding: '12px 16px',
+                          borderBottom: i < items.length - 1 ? '1px solid #334155' : 'none',
+                        }}>
+                          <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', lineHeight: '1.4' }}>{item.description}</span>
+                          <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#f1f5f9', whiteSpace: 'nowrap' }}>{formatCurrency(item.amount)}</span>
+                        </div>
+                      ))}
                     </div>
+                  </div>
 
-                    {/* Payment for */}
-                    <div style={{ background: '#1e293b', borderRadius: '12px', padding: '14px 18px', marginBottom: form.notes ? '10px' : '0' }}>
-                      <p style={{ margin: '0 0 5px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>Payment For</p>
-                      <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#cbd5e1', lineHeight: '1.5' }}>{form.description}</p>
-                    </div>
-
-                    {form.notes && (
+                  {form.notes && (
+                    <div style={{ padding: '14px 36px 0' }}>
                       <div style={{ background: '#1e293b', borderRadius: '12px', padding: '12px 18px' }}>
                         <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>Notes</p>
                         <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>{form.notes}</p>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
-                  {/* Footer */}
-                  <div style={{ borderTop: '1px solid #1e293b', padding: '14px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ margin: 0, fontSize: '10px', color: '#334155' }}>Issued via <strong style={{ color: '#10b981' }}>Morniy</strong></p>
-                    <p style={{ margin: 0, fontSize: '10px', color: '#334155' }}>{formattedDate}</p>
+                  {/* Footer with verification QR */}
+                  <div style={{ borderTop: '1px solid #1e293b', marginTop: '22px', padding: '18px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '10px', color: '#334155' }}>Issued via <strong style={{ color: '#10b981' }}>Morniy</strong></p>
+                      <p style={{ margin: '3px 0 0', fontSize: '9px', color: '#334155' }}>Scan to verify this receipt</p>
+                    </div>
+                    {qrDataUrl && (
+                      <img src={qrDataUrl} alt="Verify receipt QR" style={{ width: '52px', height: '52px', borderRadius: '8px', background: '#fff', padding: '4px' }} />
+                    )}
                   </div>
 
                 </div>
@@ -323,7 +407,7 @@ const IssueReceiptModal: React.FC<Props> = ({ transaction, client, onClose, onCr
                   <i className="fas fa-check text-base"></i>
                 </div>
                 <p className="text-sm font-black text-emerald-800">Receipt {receipt?.receiptNumber} Created</p>
-                <p className="text-xs text-emerald-600 mt-0.5">For {form.payerName} · {formatCurrency(transaction.amount)}</p>
+                <p className="text-xs text-emerald-600 mt-0.5">For {form.payerName} · {formatCurrency(total)} · {items.length} item{items.length !== 1 ? 's' : ''}</p>
               </div>
 
               {/* Share section */}

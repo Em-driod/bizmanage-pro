@@ -24,7 +24,7 @@ const Transactions: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [issueReceiptTx, setIssueReceiptTx] = useState<Transaction | null>(null);
+  const [issueReceiptTxs, setIssueReceiptTxs] = useState<Transaction[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkCategory, setBulkCategory] = useState('');
   const [isBulkSaving, setIsBulkSaving] = useState(false);
@@ -246,6 +246,8 @@ const Transactions: React.FC = () => {
     }
   };
 
+  const selectedIncomeTxs = transactions.filter((tx) => selectedIds.has(tx._id) && tx.type === 'income');
+
   const handleBulkCategorize = async () => {
     if (!bulkCategory.trim() || selectedIds.size === 0) return;
     setIsBulkSaving(true);
@@ -336,6 +338,16 @@ const Transactions: React.FC = () => {
               {isBulkSaving ? 'Saving…' : 'Apply'}
             </button>
           </div>
+          {selectedIncomeTxs.length > 0 && (
+            <button
+              onClick={() => setIssueReceiptTxs(selectedIncomeTxs)}
+              className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500 text-white text-sm font-black rounded-lg hover:bg-emerald-400 transition-colors shrink-0"
+              title="Issue one receipt covering all selected income transactions"
+            >
+              <i className="fas fa-receipt text-xs"></i>
+              Issue Receipt ({selectedIncomeTxs.length})
+            </button>
+          )}
           <button
             onClick={() => setSelectedIds(new Set())}
             className="text-indigo-200 text-xs font-bold hover:text-white shrink-0"
@@ -419,7 +431,7 @@ const Transactions: React.FC = () => {
                         <div className="flex justify-end items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0">
                           {tx.type === 'income' && (
                             <button
-                              onClick={() => setIssueReceiptTx(tx)}
+                              onClick={() => setIssueReceiptTxs([tx])}
                               className="w-9 h-9 flex items-center justify-center bg-white border border-emerald-100 rounded-xl text-emerald-500 hover:text-emerald-700 hover:border-emerald-300 shadow-sm hover:shadow-md transition-all"
                               title="Issue Receipt"
                             >
@@ -501,7 +513,7 @@ const Transactions: React.FC = () => {
                   <div className="flex items-center gap-2 pt-1">
                     {tx.type === 'income' && (
                       <button
-                        onClick={() => setIssueReceiptTx(tx)}
+                        onClick={() => setIssueReceiptTxs([tx])}
                         className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-xs font-bold text-emerald-700 active:bg-emerald-100 transition-colors"
                       >
                         <i className="fas fa-file-invoice text-xs"></i>
@@ -543,12 +555,21 @@ const Transactions: React.FC = () => {
         onScanComplete={handleScanComplete}
       />
 
-      {issueReceiptTx && (
+      {issueReceiptTxs && issueReceiptTxs.length > 0 && (
         <IssueReceiptModal
-          transaction={issueReceiptTx}
-          client={(() => { const cid = issueReceiptTx.clientId; if (!cid) return null; const id = typeof cid === 'object' ? (cid as any)._id : cid; return clients.find(c => c._id === id) || null; })()}
-          onClose={() => setIssueReceiptTx(null)}
-          onCreated={() => {}}
+          transactions={issueReceiptTxs}
+          client={(() => {
+            const ids = issueReceiptTxs.map(tx => {
+              const cid = tx.clientId;
+              if (!cid) return null;
+              return typeof cid === 'object' ? (cid as any)._id : cid;
+            });
+            const first = ids[0];
+            if (!first || !ids.every(id => id === first)) return null;
+            return clients.find(c => c._id === first) || null;
+          })()}
+          onClose={() => setIssueReceiptTxs(null)}
+          onCreated={() => setSelectedIds(new Set())}
         />
       )}
 
