@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CurrencyProvider } from './context/CurrencyContext';
@@ -11,42 +11,51 @@ import ToastContainer from './components/ToastContainer';
 import CommandPalette from './components/CommandPalette';
 import { UserRole } from './types';
 
-// Pages
+// Pages — Landing/Login/Register load eagerly (first thing most visitors hit).
+// Everything else is lazy so the initial bundle doesn't ship all 30 pages upfront.
 import Landing from './pages/Landing';
-import Dashboard from './pages/Dashboard';
-import Clients from './pages/Clients';
-import Transactions from './pages/Transactions';
-import Payrolls from './pages/Payrolls';
-import Users from './pages/Users';
-import BusinessPage from './pages/Businesses';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Reports from './pages/Reports';
-import Invoices from './pages/Invoices';
-import ScannedTransactions from './pages/ScannedTransactions';
-import ActivityLog from './pages/ActivityLog';
-import Automation from './pages/Automation';
-import Projects from './pages/Projects';
-import Tax from './pages/Tax';
-import PublicInvoice from './pages/PublicInvoice';
-import PublicProfile from './pages/PublicProfile';
-import Proposals from './pages/Proposals';
-import PublicProposal from './pages/PublicProposal';
-import Products from './pages/Products';
-import PublicPayslip from './pages/PublicPayslip';
-import ClientPortal from './pages/ClientPortal';
-import CapitalAssets from './pages/CapitalAssets';
-import Budgets from './pages/Budgets';
-import PublicReceipt from './pages/PublicReceipt';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Clients = lazy(() => import('./pages/Clients'));
+const Transactions = lazy(() => import('./pages/Transactions'));
+const Payrolls = lazy(() => import('./pages/Payrolls'));
+const Users = lazy(() => import('./pages/Users'));
+const BusinessPage = lazy(() => import('./pages/Businesses'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Invoices = lazy(() => import('./pages/Invoices'));
+const ScannedTransactions = lazy(() => import('./pages/ScannedTransactions'));
+const ActivityLog = lazy(() => import('./pages/ActivityLog'));
+const Automation = lazy(() => import('./pages/Automation'));
+const Projects = lazy(() => import('./pages/Projects'));
+const Tax = lazy(() => import('./pages/Tax'));
+const PublicInvoice = lazy(() => import('./pages/PublicInvoice'));
+const PublicProfile = lazy(() => import('./pages/PublicProfile'));
+const Proposals = lazy(() => import('./pages/Proposals'));
+const PublicProposal = lazy(() => import('./pages/PublicProposal'));
+const Products = lazy(() => import('./pages/Products'));
+const PublicPayslip = lazy(() => import('./pages/PublicPayslip'));
+const ClientPortal = lazy(() => import('./pages/ClientPortal'));
+const CapitalAssets = lazy(() => import('./pages/CapitalAssets'));
+const Budgets = lazy(() => import('./pages/Budgets'));
+const PublicReceipt = lazy(() => import('./pages/PublicReceipt'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
+
+const RouteFallback: React.FC = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+  </div>
+);
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
 
   return (
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Landing />} />
@@ -91,6 +100,7 @@ const AppRoutes = () => {
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 };
 

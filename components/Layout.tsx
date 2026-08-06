@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CurrencySelector from './CurrencySelector';
@@ -6,7 +6,9 @@ import { apiRequest } from '../services/api';
 import { usePrint } from '../context/PrintContext';
 import ReceiptPrint from './ReceiptPrint';
 import SearchModal from './SearchModal';
-import QrScannerModal from './QrScannerModal';
+
+// Lazy: pulls in the heavy html5-qrcode camera library, only needed once someone opens the scanner.
+const QrScannerModal = lazy(() => import('./QrScannerModal'));
 
 interface Notification {
   _id: string;
@@ -431,23 +433,27 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         />
       )}
       {isSearchOpen && <SearchModal onClose={() => setIsSearchOpen(false)} />}
-      <QrScannerModal
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onResult={(text) => {
-          setIsScannerOpen(false);
-          if (text.startsWith(window.location.origin)) {
-            const hashPath = text.split('#')[1];
-            if (hashPath) { navigate(hashPath); return; }
-          }
-          if (/^https?:\/\//i.test(text)) {
-            window.open(text, '_blank', 'noreferrer');
-          } else {
-            navigator.clipboard?.writeText(text).catch(() => {});
-            alert(`Scanned: ${text}\n(copied to clipboard)`);
-          }
-        }}
-      />
+      {isScannerOpen && (
+        <Suspense fallback={null}>
+          <QrScannerModal
+            isOpen={isScannerOpen}
+            onClose={() => setIsScannerOpen(false)}
+            onResult={(text) => {
+              setIsScannerOpen(false);
+              if (text.startsWith(window.location.origin)) {
+                const hashPath = text.split('#')[1];
+                if (hashPath) { navigate(hashPath); return; }
+              }
+              if (/^https?:\/\//i.test(text)) {
+                window.open(text, '_blank', 'noreferrer');
+              } else {
+                navigator.clipboard?.writeText(text).catch(() => {});
+                alert(`Scanned: ${text}\n(copied to clipboard)`);
+              }
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
