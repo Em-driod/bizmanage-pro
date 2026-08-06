@@ -344,7 +344,7 @@ const FloatingOrbs: React.FC = () => (
 const cyclerItems = [
   { icon: '⚡', text: 'Setup in under 60 seconds' },
   { icon: '🇳🇬', text: 'Built for Nigerian operators' },
-  { icon: '📊', text: '247+ businesses running on Morniy' },
+  { icon: '📊', text: 'Invoicing, payroll & bookkeeping in one place' },
   { icon: '🔒', text: '100% of your data stays yours' },
 ];
 const HeroCycler: React.FC = () => {
@@ -443,15 +443,15 @@ const Landing: React.FC = () => {
 
   const stats = [
     { val: 60, suffix: 's', label: 'Setup Time' },
-    { val: 247, suffix: '+', label: 'Operators' },
+    { val: 8, suffix: '+', label: 'Core Modules' },
     { val: 100, suffix: '%', label: 'Data Yours' },
     { val: 4, suffix: 'x', label: 'Faster Ops' },
   ];
 
-  const testimonials = [
-    { quote: "I used to manage finances in three spreadsheets. Morniy collapsed it all into one view. I can see everything from my phone.", name: 'Tunde A.', role: 'Founder, Retail Chain', initials: 'TA', accent: '#4F46E5' },
-    { quote: "Payroll used to take half a day every month. Now it's done in 60 seconds. The team gets paid on time, every time.", name: 'Amara K.', role: 'CEO, Logistics Co.', initials: 'AK', accent: '#059669' },
-    { quote: "Invoice scanning alone paid for itself. We caught three double-billings in the first week. Money we would have lost forever.", name: 'Chidi O.', role: 'COO, Agency Group', initials: 'CO', accent: '#E11D48' },
+  const proofPoints = [
+    { quote: "Snap a photo of a receipt or invoice and let AI vision extract the amount, date, and vendor automatically — no manual entry.", title: 'AI Receipt & Invoice Scanning', icon: 'M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm4 3h8M8 12h8M8 16h5', accent: '#4F46E5' },
+    { quote: "Run salaries for your whole team in one click, with payslips generated and a full paper trail — down from hours to seconds.", title: 'One-Click Payroll', icon: 'M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z', accent: '#059669' },
+    { quote: "Every naira tracked across currencies, with tax computed to Nigerian PIT bands and reliefs — no accountant required to get started.", title: 'Multi-Currency + Nigerian Tax', icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14.5V18h-2v-1.5c-1.77-.44-3-1.96-3-3.5h2c0 1.1.9 2 2 2s2-.9 2-2c0-1.1-.9-2-2-2-2.21 0-4-1.79-4-4 0-1.54 1.23-3.06 3-3.5V6h2v1.5c1.77.44 3 1.96 3 3.5h-2c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2c2.21 0 4 1.79 4 4 0 1.54-1.23 3.06-3 3.5z', accent: '#E11D48' },
   ];
 
   const tickerItems = ['Cashflow Intelligence', 'Client CRM', 'Invoice Scanning', 'Payroll Automation', 'Live Reports', 'Multi-currency', 'Role Access', 'Built for Africa'];
@@ -671,20 +671,16 @@ const Landing: React.FC = () => {
                 </Link>
               </motion.div>
 
-              {/* Social proof */}
+              {/* Why operators pick Morniy */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }} className="flex items-center gap-3">
-                <div className="flex -space-x-2.5">
-                  {[['TA','#4F46E5'],['AK','#059669'],['CO','#E11D48'],['EB','#D97706'],['MF','#7C3AED']].map(([init,bg],i) => (
-                    <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.4 + i * 0.08 }}
-                      className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black text-white flex-shrink-0" style={{ background: bg }}>{init}</motion.div>
-                  ))}
+                <div className="flex items-center gap-1.5">
+                  <i className="fas fa-shield-halved text-indigo-500 text-sm" />
+                  <i className="fas fa-bolt text-indigo-500 text-sm" />
+                  <i className="fas fa-earth-africa text-indigo-500 text-sm" />
                 </div>
                 <div>
-                  <p style={{ fontSize: 11, fontWeight: 800, color: '#0F172A' }}>247+ operators running sharp</p>
-                  <div className="flex gap-0.5 mt-0.5">
-                    {[...Array(5)].map((_,i) => <svg key={i} className="w-3 h-3" viewBox="0 0 24 24" fill="#FBBF24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>)}
-                    <span style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', marginLeft: 4 }}>5.0 · Nigeria</span>
-                  </div>
+                  <p style={{ fontSize: 11, fontWeight: 800, color: '#0F172A' }}>Secure · Fast · Built for Nigeria</p>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', marginTop: 2 }}>No card required to start</p>
                 </div>
               </motion.div>
             </motion.div>
@@ -1248,7 +1244,7 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* ══════════ TESTIMONIALS ══════════ */}
+      {/* ══════════ WHAT YOU ACTUALLY GET ══════════ */}
       <section className="py-28 md:py-44 bg-white">
         <div className="max-w-[1440px] mx-auto px-8 md:px-14">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-14 md:mb-20">
@@ -1260,21 +1256,17 @@ const Landing: React.FC = () => {
                 className="flex items-center gap-3 mb-5"
               >
                 <div className="w-7 h-px bg-indigo-500" />
-                <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.6em', textTransform: 'uppercase', color: '#4F46E5' }}>Operator Stories</span>
+                <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.6em', textTransform: 'uppercase', color: '#4F46E5' }}>Built, Not Promised</span>
               </motion.div>
               <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.04em', lineHeight: 0.92, margin: 0 }}>
-                <SplitText text="Real Operators." className="block text-slate-900" />
-                <SplitText text="Real Results." className="block text-slate-200" delay={0.18} />
+                <SplitText text="What You" className="block text-slate-900" />
+                <SplitText text="Actually Get." className="block text-slate-200" delay={0.18} />
               </h2>
-            </div>
-            <div className="flex items-center gap-2">
-              {[...Array(5)].map((_, i) => <svg key={i} className="w-4 h-4" viewBox="0 0 24 24" fill="#FBBF24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>)}
-              <span style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', marginLeft: 6 }}>5.0 avg rating</span>
             </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-5">
-            {testimonials.map((t, i) => (
+            {proofPoints.map((t, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 50, rotate: i === 1 ? 0 : i === 0 ? -1 : 1 }}
@@ -1284,34 +1276,25 @@ const Landing: React.FC = () => {
                 whileHover={{ y: -6, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
                 className="relative bg-white rounded-2xl border border-slate-100 p-8 shadow-sm hover:shadow-2xl hover:shadow-slate-200/60 transition-shadow duration-400 flex flex-col gap-6 group cursor-default"
               >
-                {/* Quote mark */}
-                <div className="absolute top-6 right-7 text-5xl font-black leading-none pointer-events-none select-none" style={{ color: t.accent + '12' }}>"</div>
+                {/* Icon */}
+                <motion.div
+                  initial={{ scale: 0 }}
+                  whileInView={{ scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.12, type: 'spring', stiffness: 300, damping: 18 }}
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: t.accent + '14' }}
+                >
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="2"><path d={t.icon} /></svg>
+                </motion.div>
 
-                {/* Stars */}
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, si) => (
-                    <motion.svg
-                      key={si}
-                      initial={{ scale: 0 }}
-                      whileInView={{ scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.12 + si * 0.06, type: 'spring', stiffness: 400, damping: 15 }}
-                      className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={t.accent}
-                    ><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></motion.svg>
-                  ))}
-                </div>
-
-                <p style={{ fontSize: 15, lineHeight: 1.72, color: '#374151', fontWeight: 500, flex: 1 }}>
-                  "{t.quote}"
+                <p style={{ fontSize: 13, fontWeight: 900, color: '#0F172A', letterSpacing: '-0.01em' }}>
+                  {t.title}
                 </p>
 
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-black text-white flex-shrink-0 shadow-lg" style={{ background: t.accent }}>{t.initials}</div>
-                  <div>
-                    <p style={{ fontSize: 13, fontWeight: 900, color: '#0F172A' }}>{t.name}</p>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8' }}>{t.role}</p>
-                  </div>
-                </div>
+                <p style={{ fontSize: 14, lineHeight: 1.7, color: '#64748B', fontWeight: 500, flex: 1 }}>
+                  {t.quote}
+                </p>
 
                 {/* Accent border on hover */}
                 <motion.div
@@ -1422,7 +1405,7 @@ const Landing: React.FC = () => {
             className="inline-flex items-center gap-2 mb-10"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-            <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.6em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Join 247+ Operators</span>
+            <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.6em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>Start Free Today</span>
             <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
           </motion.div>
 

@@ -67,26 +67,31 @@ const BusinessPage: React.FC = () => {
   const [shareUrl, setShareUrl] = useState('');
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const fetchBusiness = async () => {
+    if (!user?.businessId) return;
+    setIsLoading(true);
+    try {
+      const data = await apiRequest<any>(`/businesses/${user.businessId}`);
+      setBusiness(data);
+      setLoadError(null);
+      setFormData({ name: data.name, address: data.address || '', email: data.email || '', phone: data.phone || '', currency: data.currency });
+      if (data.profile) {
+        setProfile({ ...emptyProfile, ...data.profile, services: data.profile.services || [], coverImage: data.profile.coverImage || '', logoImage: data.profile.logoImage || '', accentColor: data.profile.accentColor || '#6366f1', bankName: data.profile.bankName || '', accountNumber: data.profile.accountNumber || '', accountName: data.profile.accountName || '', bankName2: data.profile.bankName2 || '', accountNumber2: data.profile.accountNumber2 || '', accountName2: data.profile.accountName2 || '' });
+      }
+      if (data.slug) {
+        setShareUrl(`${window.location.origin}/biz/${data.slug}`);
+      }
+    } catch (err: any) {
+      setBusiness(null);
+      setLoadError(err?.message || 'Could not load your business. Check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchBusiness = async () => {
-      if (!user?.businessId) return;
-      try {
-        const data = await apiRequest<any>(`/businesses/${user.businessId}`);
-        setBusiness(data);
-        setFormData({ name: data.name, address: data.address || '', email: data.email || '', phone: data.phone || '', currency: data.currency });
-        if (data.profile) {
-          setProfile({ ...emptyProfile, ...data.profile, services: data.profile.services || [], coverImage: data.profile.coverImage || '', logoImage: data.profile.logoImage || '', accentColor: data.profile.accentColor || '#6366f1', bankName: data.profile.bankName || '', accountNumber: data.profile.accountNumber || '', accountName: data.profile.accountName || '', bankName2: data.profile.bankName2 || '', accountNumber2: data.profile.accountNumber2 || '', accountName2: data.profile.accountName2 || '' });
-        }
-        if (data.slug) {
-          setShareUrl(`${window.location.origin}/biz/${data.slug}`);
-        }
-      } catch {
-        setBusiness({ _id: user.businessId, name: 'Sample Business', address: '', email: '', phone: '', currency: 'USD' } as any);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchBusiness();
   }, [user?.businessId]);
 
@@ -145,6 +150,24 @@ const BusinessPage: React.FC = () => {
           <i className="fas fa-briefcase text-white text-lg"></i>
         </div>
         <p className="text-sm font-bold text-slate-400">Loading your workspace...</p>
+      </div>
+    </div>
+  );
+
+  if (loadError || !business) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4 text-center max-w-sm px-6">
+        <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center">
+          <i className="fas fa-triangle-exclamation text-rose-500 text-lg"></i>
+        </div>
+        <div>
+          <p className="text-sm font-bold text-slate-700">Couldn't load your business</p>
+          <p className="text-xs text-slate-400 mt-1">{loadError || 'Something went wrong.'}</p>
+        </div>
+        <button onClick={fetchBusiness}
+          className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all">
+          <i className="fas fa-rotate-right mr-1.5"></i>Try Again
+        </button>
       </div>
     </div>
   );
