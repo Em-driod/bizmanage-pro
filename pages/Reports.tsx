@@ -95,7 +95,7 @@ const Reports: React.FC = () => {
     if (!reportData) return;
     const fmt = (n: number) => n.toFixed(2);
     const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
-    const isGrouped = Array.isArray(reportData);
+    const isGrouped = groupBy !== 'none' && Array.isArray(reportData);
     let csv = '';
 
     // Header block
@@ -128,7 +128,7 @@ const Reports: React.FC = () => {
         csv += `${name},${fmt(row.totalIncome)},${fmt(row.totalExpenses)},${fmt(row.netProfit)},${row.totalTransactions},${incPct},${expPct}\n`;
       });
     } else {
-      const s = reportData as ReportSummary;
+      const s = (Array.isArray(reportData) ? reportData[0] : reportData) as ReportSummary;
       const margin = s.totalIncome > 0 ? ((s.netProfit / s.totalIncome) * 100).toFixed(1) : '0';
       csv += `OVERALL SUMMARY\n`;
       csv += `Metric,Value\n`;
@@ -158,8 +158,13 @@ const Reports: React.FC = () => {
     URL.revokeObjectURL(a.href);
   };
 
-  const summary = !Array.isArray(reportData) ? (reportData as ReportSummary | null) : null;
-  const grouped = Array.isArray(reportData) ? (reportData as ReportItem[]) : null;
+  // The backend always returns an array from /reports/summary, even in "Overall" mode
+  // (a one-element array with no _id). Array.isArray() alone can't tell grouped from
+  // ungrouped responses apart — groupBy is the actual source of truth for that.
+  const summary = groupBy === 'none' && Array.isArray(reportData)
+    ? ((reportData[0] as ReportSummary | undefined) ?? null)
+    : null;
+  const grouped = groupBy !== 'none' && Array.isArray(reportData) ? (reportData as ReportItem[]) : null;
 
   const maxTrendVal = trendData.length > 0 ? Math.max(...trendData.map(r => Math.max(r.income, r.expenses))) : 1;
 

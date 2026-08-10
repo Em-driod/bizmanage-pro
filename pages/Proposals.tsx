@@ -75,12 +75,13 @@ const Proposals: React.FC = () => {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [pRes, c, prods] = await Promise.all([
+      const [pRes, cRes, prods] = await Promise.all([
         apiRequest<{ data: Proposal[] } | Proposal[]>('/proposals'),
-        apiRequest<Client[]>('/clients'),
+        apiRequest<{ data: Client[] } | Client[]>('/clients?limit=200'),
         apiRequest<Product[]>('/products'),
       ]);
       const p = Array.isArray(pRes) ? pRes : (pRes as any).data ?? [];
+      const c = Array.isArray(cRes) ? cRes : (cRes as any).data ?? [];
       setProposals(p);
       setProducts(prods);
       setClients(c);

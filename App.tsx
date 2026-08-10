@@ -9,6 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import ToastContainer from './components/ToastContainer';
 import CommandPalette from './components/CommandPalette';
+import ErrorBoundary from './components/ErrorBoundary';
 import { UserRole } from './types';
 
 // Pages — Landing/Login/Register load eagerly (first thing most visitors hit).
@@ -113,7 +114,9 @@ const App: React.FC = () => {
             <SocketProvider>
               <Router>
                 <CommandPalette />
-                <AppRoutes />
+                <ErrorBoundary>
+                  <AppRoutes />
+                </ErrorBoundary>
               </Router>
               <ToastContainer />
             </SocketProvider>

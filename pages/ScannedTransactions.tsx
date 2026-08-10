@@ -32,10 +32,11 @@ const ScannedTransactions: React.FC = () => {
   const fetchScannedTransactions = async () => {
     setIsLoading(true);
     try {
-      const [scans, clientData] = await Promise.all([
+      const [scans, clientRes] = await Promise.all([
         apiRequest<IScannedTransaction[]>('/scanned-transactions'),
-        apiRequest<Client[]>('/clients')
+        apiRequest<{ data: Client[] } | Client[]>('/clients?limit=200')
       ]);
+      const clientData = Array.isArray(clientRes) ? clientRes : (clientRes as any).data ?? [];
       setScannedTxs(scans);
       setClients(clientData);
     } catch (error) {

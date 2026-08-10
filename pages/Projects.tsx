@@ -84,12 +84,13 @@ const Projects: React.FC = () => {
 
   const loadAll = async () => {
     try {
-      const [projectsData, clientsData, usersData, teamData] = await Promise.all([
+      const [projectsData, clientsRes, usersData, teamData] = await Promise.all([
         apiRequest<ProjectListItem[]>('/projects'),
-        apiRequest<Client[]>('/clients').catch(() => []),
+        apiRequest<{ data: Client[] } | Client[]>('/clients?limit=200').catch(() => []),
         apiRequest<User[]>('/users').catch(() => []),
         apiRequest<TeamUtilization>('/projects/team/utilization').catch(() => null),
       ]);
+      const clientsData = Array.isArray(clientsRes) ? clientsRes : (clientsRes as any).data ?? [];
       setProjects(projectsData);
       setClients(clientsData);
       setUsers(usersData);
