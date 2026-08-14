@@ -13,6 +13,7 @@ export interface Product {
   image?: string;
   trackStock?: boolean;
   stock?: number;
+  showOnProfile?: boolean;
 }
 
 const toBase64 = (file: File): Promise<string> =>
@@ -50,6 +51,7 @@ const Products: React.FC = () => {
     image: '',
     trackStock: false,
     stock: '',
+    showOnProfile: true,
   });
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
@@ -67,7 +69,7 @@ const Products: React.FC = () => {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ name: '', description: '', price: '', unit: '', category: '', image: '', trackStock: false, stock: '' });
+    setForm({ name: '', description: '', price: '', unit: '', category: '', image: '', trackStock: false, stock: '', showOnProfile: true });
     setShowForm(true);
   };
 
@@ -82,6 +84,7 @@ const Products: React.FC = () => {
       image: p.image || '',
       trackStock: !!p.trackStock,
       stock: p.stock != null ? String(p.stock) : '',
+      showOnProfile: p.showOnProfile !== false,
     });
     setShowForm(true);
   };
@@ -472,6 +475,22 @@ const Products: React.FC = () => {
                     type="checkbox"
                     checked={form.trackStock}
                     onChange={e => setForm(f => ({ ...f, trackStock: e.target.checked }))}
+                    className="w-5 h-5 accent-indigo-600 flex-shrink-0 ml-3"
+                  />
+                </label>
+              </div>
+
+              {/* Public profile visibility */}
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span>
+                    <span className="block text-sm font-bold text-slate-700">Show on public profile</span>
+                    <span className="block text-xs text-slate-400 mt-0.5">Appears automatically on your public business page, if it's turned on</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={form.showOnProfile}
+                    onChange={e => setForm(f => ({ ...f, showOnProfile: e.target.checked }))}
                     className="w-5 h-5 accent-indigo-600 flex-shrink-0 ml-3"
                   />
                 </label>
