@@ -97,7 +97,7 @@ const Products: React.FC = () => {
     if (!form.name.trim()) { showToast('Name is required'); return; }
     const price = parseFloat(form.price);
     if (isNaN(price) || price < 0) { showToast('Enter a valid price'); return; }
-    const stock = form.trackStock ? (parseInt(form.stock, 10) || 0) : undefined;
+    const stock = form.stock !== '' ? (parseInt(form.stock, 10) || 0) : undefined;
     const payload = { ...form, price, stock };
     setSaving(true);
     try {
@@ -444,40 +444,37 @@ const Products: React.FC = () => {
 
               {/* Stock tracking */}
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                <label className="flex items-center justify-between cursor-pointer">
+                <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Units in Stock</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={form.stock}
+                  onChange={e => {
+                    const v = e.target.value;
+                    if (v === '' || /^-?\d*$/.test(v)) setForm(f => ({ ...f, stock: v }));
+                  }}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+                {form.stock !== '' && !isNaN(parseInt(form.stock, 10)) && (
+                  <p className="text-[10px] text-slate-400 mt-1.5">
+                    <i className="fas fa-circle-info text-indigo-400 mr-1"></i>
+                    You have {parseInt(form.stock, 10)} {form.unit ? `× ${form.unit}` : 'unit(s)'} in stock
+                  </p>
+                )}
+
+                <label className="flex items-center justify-between cursor-pointer mt-3 pt-3 border-t border-slate-200">
                   <span>
-                    <span className="block text-sm font-bold text-slate-700">Track stock for this item</span>
-                    <span className="block text-xs text-slate-400 mt-0.5">Reduces automatically when picked on a receipt</span>
+                    <span className="block text-sm font-bold text-slate-700">Auto-reduce on receipts</span>
+                    <span className="block text-xs text-slate-400 mt-0.5">Show on the catalog card and reduce automatically when picked on a receipt</span>
                   </span>
                   <input
                     type="checkbox"
                     checked={form.trackStock}
                     onChange={e => setForm(f => ({ ...f, trackStock: e.target.checked }))}
-                    className="w-5 h-5 accent-indigo-600"
+                    className="w-5 h-5 accent-indigo-600 flex-shrink-0 ml-3"
                   />
                 </label>
-                {form.trackStock && (
-                  <div className="mt-3">
-                    <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Units in Stock</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="0"
-                      value={form.stock}
-                      onChange={e => {
-                        const v = e.target.value;
-                        if (v === '' || /^-?\d*$/.test(v)) setForm(f => ({ ...f, stock: v }));
-                      }}
-                      className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                    />
-                    {form.stock !== '' && !isNaN(parseInt(form.stock, 10)) && (
-                      <p className="text-[10px] text-slate-400 mt-1.5">
-                        <i className="fas fa-circle-info text-indigo-400 mr-1"></i>
-                        You have {parseInt(form.stock, 10)} {form.unit ? `× ${form.unit}` : 'unit(s)'} in stock
-                      </p>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Category */}
