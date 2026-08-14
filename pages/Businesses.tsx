@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { Business } from '../types';
 import { apiRequest } from '../services/api';
@@ -620,7 +621,7 @@ const BusinessPage: React.FC = () => {
 
           {/* Services */}
           <SectionCard
-            icon="fa-layer-group" title="Services / Products"
+            icon="fa-layer-group" title="Additional Items (optional)"
             subtitle={`${profile.services.length} item${profile.services.length !== 1 ? 's' : ''} listed`}
             accent="#ec4899"
             action={
@@ -629,6 +630,14 @@ const BusinessPage: React.FC = () => {
                 <i className="fas fa-plus text-[10px]" /> Add Item
               </button>
             }>
+            <div className="flex items-start gap-3 px-4 py-3 mb-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+              <i className="fas fa-circle-info text-indigo-400 text-sm mt-0.5 flex-shrink-0"></i>
+              <p className="text-xs text-indigo-700 leading-relaxed">
+                Products from your <Link to="/products" className="font-black underline hover:text-indigo-900">Catalog</Link> already
+                show up on your public page automatically — no need to re-add them here. Only use this list for something extra
+                that isn't in your Catalog.
+              </p>
+            </div>
             {profile.services.length === 0 ? (
               <div className="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl">
                 <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
