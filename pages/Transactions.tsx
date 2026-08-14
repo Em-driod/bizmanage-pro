@@ -6,6 +6,7 @@ import { useCurrency } from '../context/CurrencyContext';
 import ScanTransactionModal from '../components/ScanTransactionModal';
 import ImportCsvModal from '../components/ImportCsvModal';
 import IssueReceiptModal from '../components/IssueReceiptModal';
+import TransactionSummaryModal from '../components/TransactionSummaryModal';
 
 const Transactions: React.FC = () => {
   const { formatCurrency } = useCurrency();
@@ -24,6 +25,7 @@ const Transactions: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [issueReceiptTxs, setIssueReceiptTxs] = useState<Transaction[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkCategory, setBulkCategory] = useState('');
@@ -304,6 +306,12 @@ const Transactions: React.FC = () => {
           >
             <i className="fas fa-file-csv text-xs"></i> Import CSV
           </button>
+          <button
+            onClick={() => setShowSummaryModal(true)}
+            className="w-full sm:w-auto lg:w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-2.5 sm:px-5 sm:py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 transition-all text-sm font-bold"
+          >
+            <i className="fas fa-print text-xs text-slate-400"></i> Print Summary
+          </button>
         </div>
       </div>
 
@@ -578,6 +586,8 @@ const Transactions: React.FC = () => {
         onClose={() => setShowImportModal(false)}
         onImported={fetchData}
       />
+
+      {showSummaryModal && <TransactionSummaryModal onClose={() => setShowSummaryModal(false)} />}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">

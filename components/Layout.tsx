@@ -25,6 +25,7 @@ const NAV_GROUPS = [
       { label: 'Dashboard', path: '/dashboard', icon: 'fa-layer-group' },
       { label: 'Clients', path: '/clients', icon: 'fa-address-book' },
       { label: 'Invoices', path: '/invoices', icon: 'fa-file-invoice' },
+      { label: 'Receipts', path: '/receipts', icon: 'fa-money-check-dollar' },
       { label: 'Transactions', path: '/transactions', icon: 'fa-receipt' },
       { label: 'Proposals', path: '/proposals', icon: 'fa-file-signature' },
     ],

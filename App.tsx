@@ -21,6 +21,7 @@ import Register from './pages/Register';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Clients = lazy(() => import('./pages/Clients'));
 const Transactions = lazy(() => import('./pages/Transactions'));
+const Receipts = lazy(() => import('./pages/Receipts'));
 const Payrolls = lazy(() => import('./pages/Payrolls'));
 const Users = lazy(() => import('./pages/Users'));
 const BusinessPage = lazy(() => import('./pages/Businesses'));
@@ -78,6 +79,7 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
         <Route path="/clients" element={<Layout><Clients /></Layout>} />
         <Route path="/transactions" element={<Layout><Transactions /></Layout>} />
+        <Route path="/receipts" element={<Layout><Receipts /></Layout>} />
         <Route path="/scanned-transactions" element={<Layout><ScannedTransactions /></Layout>} />
         <Route path="/payroll" element={<Layout><Payrolls /></Layout>} />
         <Route path="/reports" element={<Layout><Reports /></Layout>} />

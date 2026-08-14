@@ -11,6 +11,8 @@ export interface Product {
   unit?: string;
   category?: string;
   image?: string;
+  trackStock?: boolean;
+  stock?: number;
 }
 
 const toBase64 = (file: File): Promise<string> =>
@@ -34,6 +36,10 @@ const Products: React.FC = () => {
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [attentionOnly, setAttentionOnly] = useState(false);
+  const [stockFixId, setStockFixId] = useState<string | null>(null);
+  const [stockFixValue, setStockFixValue] = useState('');
+  const [savingStockFix, setSavingStockFix] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -42,6 +48,8 @@ const Products: React.FC = () => {
     unit: 'unit',
     category: '',
     image: '',
+    trackStock: false,
+    stock: '',
   });
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
@@ -59,7 +67,7 @@ const Products: React.FC = () => {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ name: '', description: '', price: '', unit: 'unit', category: '', image: '' });
+    setForm({ name: '', description: '', price: '', unit: 'unit', category: '', image: '', trackStock: false, stock: '' });
     setShowForm(true);
   };
 
@@ -72,6 +80,8 @@ const Products: React.FC = () => {
       unit: p.unit || 'unit',
       category: p.category || '',
       image: p.image || '',
+      trackStock: !!p.trackStock,
+      stock: p.stock != null ? String(p.stock) : '',
     });
     setShowForm(true);
   };
@@ -87,7 +97,8 @@ const Products: React.FC = () => {
     if (!form.name.trim()) { showToast('Name is required'); return; }
     const price = parseFloat(form.price);
     if (isNaN(price) || price < 0) { showToast('Enter a valid price'); return; }
-    const payload = { ...form, price };
+    const stock = form.trackStock ? (parseInt(form.stock, 10) || 0) : undefined;
+    const payload = { ...form, price, stock };
     setSaving(true);
     try {
       if (editingId) {
@@ -114,12 +125,38 @@ const Products: React.FC = () => {
     } catch { showToast('Failed'); }
   };
 
+  const openStockFix = (p: Product) => {
+    setStockFixId(p._id);
+    setStockFixValue(String(p.stock ?? 0));
+  };
+
+  const handleStockFixSave = async () => {
+    if (!stockFixId) return;
+    const value = parseInt(stockFixValue, 10);
+    if (isNaN(value)) { showToast('Enter a valid number'); return; }
+    setSavingStockFix(true);
+    try {
+      await apiRequest(`/products/${stockFixId}`, { method: 'PUT', body: { stock: value } });
+      showToast('Stock updated');
+      setStockFixId(null);
+      fetchProducts();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update stock');
+    } finally {
+      setSavingStockFix(false);
+    }
+  };
+
+  const handlePrintCatalog = () => window.print();
+
   const categories = [...new Set(products.map(p => p.category).filter(Boolean))] as string[];
+  const attentionCount = products.filter(p => p.trackStock && (p.stock ?? 0) <= 0).length;
 
   const filtered = products.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
     const matchCat = !filterCat || p.category === filterCat;
-    return matchSearch && matchCat;
+    const matchAttention = !attentionOnly || (p.trackStock && (p.stock ?? 0) <= 0);
+    return matchSearch && matchCat && matchAttention;
   });
 
   if (loading) {
@@ -139,23 +176,34 @@ const Products: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center justify-between gap-3 flex-wrap print:hidden">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Products &amp; Services</h1>
           <p className="text-sm text-slate-400 mt-0.5">Your catalog — pick items directly when creating invoices or proposals</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors"
-        >
-          <i className="fas fa-plus text-xs" />
-          Add Item
-        </button>
+        <div className="flex items-center gap-2">
+          {products.length > 0 && (
+            <button
+              onClick={handlePrintCatalog}
+              className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-bold px-4 py-2.5 rounded-xl transition-colors"
+            >
+              <i className="fas fa-print text-xs" />
+              Print Catalog
+            </button>
+          )}
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors"
+          >
+            <i className="fas fa-plus text-xs" />
+            Add Item
+          </button>
+        </div>
       </div>
 
       {/* Search + filter */}
       {products.length > 0 && (
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap print:hidden">
           <div className="relative flex-1 min-w-48">
             <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs" />
             <input
@@ -184,12 +232,24 @@ const Products: React.FC = () => {
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           )}
+          {attentionCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setAttentionOnly(v => !v)}
+              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                attentionOnly ? 'bg-rose-600 text-white' : 'bg-rose-50 text-rose-600 hover:bg-rose-100'
+              }`}
+            >
+              <i className="fas fa-triangle-exclamation text-xs" />
+              Needs attention ({attentionCount})
+            </button>
+          )}
         </div>
       )}
 
       {/* Empty state */}
       {products.length === 0 ? (
-        <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-12 text-center">
+        <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-12 text-center print:hidden">
           <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <i className="fas fa-box-open text-2xl text-indigo-400" />
           </div>
@@ -200,12 +260,14 @@ const Products: React.FC = () => {
           </button>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center">
+        <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center print:hidden">
           <p className="text-sm text-slate-400">No items match your search</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(p => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
+          {filtered.map(p => {
+            const lowStock = p.trackStock && (p.stock ?? 0) <= 0;
+            return (
             <div key={p._id} className="bg-white border border-slate-100 rounded-2xl overflow-hidden hover:shadow-md transition-shadow group">
               {/* Image */}
               {p.image ? (
@@ -219,11 +281,25 @@ const Products: React.FC = () => {
               )}
 
               <div className="p-4">
-                {p.category && (
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">
-                    {p.category}
-                  </span>
-                )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {p.category && (
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">
+                      {p.category}
+                    </span>
+                  )}
+                  {p.trackStock && (
+                    <button
+                      onClick={() => openStockFix(p)}
+                      title="Click to correct stock count"
+                      className={`text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full transition-colors ${
+                        lowStock ? 'text-rose-600 bg-rose-50 hover:bg-rose-100' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                      }`}
+                    >
+                      <i className="fas fa-cubes mr-1" />
+                      {p.stock} in stock{lowStock ? ' · fix' : ''}
+                    </button>
+                  )}
+                </div>
                 <p className="text-base font-bold text-slate-900 mt-2">{p.name}</p>
                 {p.description && <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{p.description}</p>}
                 <div className="flex items-center justify-between mt-3">
@@ -248,8 +324,36 @@ const Products: React.FC = () => {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
+      )}
+
+      {/* Print-only catalog table */}
+      {products.length > 0 && (
+        <table className="hidden print:table w-full text-left text-sm border-collapse">
+          <thead>
+            <tr className="border-b-2 border-slate-900">
+              <th className="py-2 pr-4">Item</th>
+              <th className="py-2 pr-4">Category</th>
+              <th className="py-2 pr-4">Price</th>
+              <th className="py-2 pr-4">Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(p => (
+              <tr key={p._id} className="border-b border-slate-200">
+                <td className="py-2 pr-4">
+                  <p className="font-semibold">{p.name}</p>
+                  {p.description && <p className="text-xs text-slate-500">{p.description}</p>}
+                </td>
+                <td className="py-2 pr-4">{p.category || '—'}</td>
+                <td className="py-2 pr-4">{formatCurrency(p.price)}{p.unit && p.unit !== 'unit' ? ` / ${p.unit}` : ''}</td>
+                <td className="py-2 pr-4">{p.trackStock ? p.stock : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       {/* Form Modal */}
@@ -337,6 +441,38 @@ const Products: React.FC = () => {
                 </div>
               </div>
 
+              {/* Stock tracking */}
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span>
+                    <span className="block text-sm font-bold text-slate-700">Track stock for this item</span>
+                    <span className="block text-xs text-slate-400 mt-0.5">Reduces automatically when picked on a receipt</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={form.trackStock}
+                    onChange={e => setForm(f => ({ ...f, trackStock: e.target.checked }))}
+                    className="w-5 h-5 accent-indigo-600"
+                  />
+                </label>
+                {form.trackStock && (
+                  <div className="mt-3">
+                    <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Stock Quantity</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={form.stock}
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (v === '' || /^-?\d*$/.test(v)) setForm(f => ({ ...f, stock: v }));
+                      }}
+                      className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Category */}
               <div>
                 <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Category</label>
@@ -379,6 +515,37 @@ const Products: React.FC = () => {
         }}
         title="Scan Product Barcode / QR"
       />
+
+      {/* Stock correction modal */}
+      {stockFixId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 space-y-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900">Correct Stock Count</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Set the actual quantity on hand right now.</p>
+            </div>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoFocus
+              value={stockFixValue}
+              onChange={e => {
+                const v = e.target.value;
+                if (v === '' || /^-?\d*$/.test(v)) setStockFixValue(v);
+              }}
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setStockFixId(null)} className="flex-1 py-2.5 border border-slate-200 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleStockFixSave} disabled={savingStockFix} className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                {savingStockFix ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

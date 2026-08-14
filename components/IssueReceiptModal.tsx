@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { toPng } from 'html-to-image';
-import QRCode from 'qrcode';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
 import { useAuth } from '../context/AuthContext';
 import { Client } from '../types';
+import ReceiptCard, { ReceiptData } from './ReceiptCard';
 
 interface Transaction {
   _id: string;
@@ -18,28 +17,51 @@ interface ReceiptItem {
   description: string;
   amount: number;
   transactionId?: string;
+  productId?: string;
+  quantity?: number;
+}
+
+interface CatalogProduct {
+  _id: string;
+  name: string;
+  price: number;
+  unit?: string;
+  trackStock?: boolean;
+  stock?: number;
 }
 
 interface Props {
-  transactions: Transaction[];
+  transactions?: Transaction[];
   client?: Client | null;
   onClose: () => void;
   onCreated: (receipt: any) => void;
 }
 
-const IssueReceiptModal: React.FC<Props> = ({ transactions, client, onClose, onCreated }) => {
+const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose, onCreated }) => {
   const { formatCurrency } = useCurrency();
   const { user } = useAuth();
   const [step, setStep] = useState<'form' | 'share'>('form');
   const [saving, setSaving] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [receipt, setReceipt] = useState<any>(null);
-  const [isSharing, setIsSharing] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
 
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [showCatalog, setShowCatalog] = useState(false);
+  const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [catalogQty, setCatalogQty] = useState<Record<string, number>>({});
+
+  const [showTxPicker, setShowTxPicker] = useState(false);
+  const [txOptions, setTxOptions] = useState<Transaction[]>([]);
+  const [txSearch, setTxSearch] = useState('');
+
+  useEffect(() => {
+    if (!showCatalog || catalog.length > 0) return;
+    apiRequest<CatalogProduct[]>('/products').then(setCatalog).catch(() => {});
+  }, [showCatalog]);
+
+  useEffect(() => {
+    if (!showTxPicker || txOptions.length > 0) return;
+    apiRequest<{ data: Transaction[] }>('/transactions?limit=100').then(res => setTxOptions(res.data)).catch(() => {});
+  }, [showTxPicker]);
 
   const latestDate = transactions.reduce<string | null>((latest, tx) => {
     const d = (tx as any).createdAt || (tx as any).date;
@@ -67,19 +89,37 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions, client, onClose, onC
   const removeItem = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i));
   const addBlankItem = () => setItems(prev => [...prev, { description: '', amount: 0 }]);
 
-  const generateImage = async (): Promise<{ dataUrl: string; file: File } | null> => {
-    await new Promise(r => setTimeout(r, 150));
-    if (!cardRef.current) return null;
-    try {
-      const dataUrl = await toPng(cardRef.current, { quality: 1, pixelRatio: 2, backgroundColor: '#ffffff' });
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], `receipt-${receipt?.receiptNumber || 'RCP'}.png`, { type: 'image/png' });
-      return { dataUrl, file };
-    } catch (e) {
-      console.error('Image generation failed', e);
-      return null;
-    }
+  const filteredCatalog = catalog.filter(p => !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()));
+
+  const addFromCatalog = (product: CatalogProduct) => {
+    const qty = Math.max(1, catalogQty[product._id] || 1);
+    setItems(prev => {
+      const existingIdx = prev.findIndex(it => it.productId === product._id);
+      if (existingIdx >= 0) {
+        const newQty = (prev[existingIdx].quantity || 1) + qty;
+        return prev.map((it, idx) => idx === existingIdx
+          ? { ...it, quantity: newQty, amount: product.price * newQty }
+          : it);
+      }
+      return [
+        ...prev,
+        {
+          description: qty > 1 ? `${product.name} x${qty}` : product.name,
+          amount: product.price * qty,
+          productId: product._id,
+          quantity: qty,
+        },
+      ];
+    });
+  };
+
+  const addedTxIds = new Set(items.map(it => it.transactionId).filter(Boolean));
+  const filteredTxOptions = txOptions.filter(tx =>
+    !addedTxIds.has(tx._id) && (!txSearch || (tx.description || '').toLowerCase().includes(txSearch.toLowerCase()))
+  );
+
+  const addFromTransaction = (tx: Transaction) => {
+    setItems(prev => [...prev, { description: tx.description || tx.category || 'Transaction', amount: tx.amount, transactionId: tx._id }]);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -88,11 +128,11 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions, client, onClose, onC
     if (items.length === 0 || items.some(it => !it.description.trim())) return;
     setSaving(true);
     try {
-      const data = await apiRequest<any>('/receipts', {
+      const data = await apiRequest<ReceiptData>('/receipts', {
         method: 'POST',
         body: {
           ...form,
-          items: items.map(({ description, amount }) => ({ description, amount })),
+          items: items.map(({ description, amount, productId, quantity }) => ({ description, amount, productId, quantity })),
           transactionIds: items.map(it => it.transactionId).filter(Boolean),
           description: items.length === 1 ? items[0].description : `${items[0].description} + ${items.length - 1} more item${items.length - 1 !== 1 ? 's' : ''}`,
           amount: total,
@@ -107,70 +147,6 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions, client, onClose, onC
       setSaving(false);
     }
   };
-
-  const publicLink = receipt
-    ? `${window.location.origin}/receipt/${receipt.publicToken}`
-    : '';
-
-  useEffect(() => {
-    if (!publicLink) { setQrDataUrl(''); return; }
-    QRCode.toDataURL(publicLink, { width: 160, margin: 1, color: { dark: '#0f172a', light: '#ffffff' } })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(''));
-  }, [publicLink]);
-
-  const handleShare = async () => {
-    setIsSharing(true);
-    try {
-      const img = await generateImage();
-      if (!img) return;
-      if (navigator.canShare && navigator.canShare({ files: [img.file] })) {
-        await navigator.share({ files: [img.file], title: `Receipt ${receipt?.receiptNumber}` });
-      } else {
-        const a = document.createElement('a');
-        a.href = img.dataUrl;
-        a.download = `receipt-${receipt?.receiptNumber}.png`;
-        a.click();
-      }
-    } catch (e: any) {
-      if (e?.name !== 'AbortError') {
-        // User cancelled share — that's fine, do nothing
-      }
-    } finally {
-      setIsSharing(false);
-    }
-  };
-
-  const handleDownload = async () => {
-    setIsDownloading(true);
-    try {
-      const img = await generateImage();
-      if (!img) return;
-      const a = document.createElement('a');
-      a.href = img.dataUrl;
-      a.download = `receipt-${receipt?.receiptNumber}.png`;
-      a.click();
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const handleSendEmail = async () => {
-    if (!receipt || !form.payerEmail) return;
-    setSendingEmail(true);
-    try {
-      await apiRequest(`/receipts/${receipt._id}/send-email`, { method: 'POST', body: { email: form.payerEmail } });
-      setEmailSent(true);
-    } catch {
-      alert('Failed to send email');
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
-  const formattedDate = form.date
-    ? new Date(form.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-    : '';
 
   const hasPreFill = !!(client?.name);
 
@@ -206,10 +182,100 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions, client, onClose, onC
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">Items *</label>
-                  <button type="button" onClick={addBlankItem} className="text-[11px] font-black text-emerald-600 hover:text-emerald-700">
-                    <i className="fas fa-plus mr-1"></i>Add line
-                  </button>
+                  <div className="flex items-center gap-3 flex-wrap justify-end">
+                    <button type="button" onClick={() => setShowTxPicker(v => !v)} className="text-[11px] font-black text-slate-600 hover:text-slate-800">
+                      <i className="fas fa-receipt mr-1"></i>Add from transactions
+                    </button>
+                    <button type="button" onClick={() => setShowCatalog(v => !v)} className="text-[11px] font-black text-indigo-600 hover:text-indigo-700">
+                      <i className="fas fa-box-open mr-1"></i>Add from catalog
+                    </button>
+                    <button type="button" onClick={addBlankItem} className="text-[11px] font-black text-emerald-600 hover:text-emerald-700">
+                      <i className="fas fa-plus mr-1"></i>Add line
+                    </button>
+                  </div>
                 </div>
+
+                {showTxPicker && (
+                  <div className="mb-3 bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Search transactions…"
+                      value={txSearch}
+                      onChange={e => setTxSearch(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-400 outline-none"
+                    />
+                    <div className="max-h-48 overflow-y-auto space-y-1.5">
+                      {filteredTxOptions.length === 0 ? (
+                        <p className="text-xs text-slate-400 text-center py-3">No matching transactions</p>
+                      ) : filteredTxOptions.map(tx => (
+                        <div key={tx._id} className="flex items-center gap-2 bg-white border border-slate-100 rounded-lg p-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-800 truncate">{tx.description || tx.category || 'Transaction'}</p>
+                            <p className="text-[10px] text-slate-400">{formatCurrency(tx.amount)}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => addFromTransaction(tx)}
+                            className="shrink-0 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-colors"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {showCatalog && (
+                  <div className="mb-3 bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Search catalog…"
+                      value={catalogSearch}
+                      onChange={e => setCatalogSearch(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-400 outline-none"
+                    />
+                    <div className="max-h-48 overflow-y-auto space-y-1.5">
+                      {filteredCatalog.length === 0 ? (
+                        <p className="text-xs text-slate-400 text-center py-3">No catalog items found</p>
+                      ) : filteredCatalog.map(p => {
+                        const lowStock = p.trackStock && (p.stock ?? 0) <= 0;
+                        const qty = catalogQty[p._id] || 1;
+                        return (
+                          <div key={p._id} className="flex items-center gap-2 bg-white border border-slate-100 rounded-lg p-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-slate-800 truncate">{p.name}</p>
+                              <p className="text-[10px] text-slate-400">
+                                {formatCurrency(p.price)}
+                                {p.trackStock && (
+                                  <span className={lowStock ? 'text-rose-500 font-bold' : ''}> · {p.stock} in stock</span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button type="button" onClick={() => setCatalogQty(q => ({ ...q, [p._id]: Math.max(1, qty - 1) }))}
+                                className="w-6 h-6 flex items-center justify-center bg-slate-100 rounded text-slate-500 hover:bg-slate-200">
+                                <i className="fas fa-minus text-[9px]"></i>
+                              </button>
+                              <span className="w-6 text-center text-xs font-bold">{qty}</span>
+                              <button type="button" onClick={() => setCatalogQty(q => ({ ...q, [p._id]: qty + 1 }))}
+                                className="w-6 h-6 flex items-center justify-center bg-slate-100 rounded text-slate-500 hover:bg-slate-200">
+                                <i className="fas fa-plus text-[9px]"></i>
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => addFromCatalog(p)}
+                              className="shrink-0 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-colors"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   {items.map((item, i) => (
                     <div key={i} className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl p-2">
@@ -301,182 +367,9 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions, client, onClose, onC
                 </button>
               </div>
             </form>
-          ) : (
-            <div className="p-6 space-y-4">
-
-              {/* Hidden receipt card for image capture */}
-              <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '460px' }} aria-hidden="true">
-                <div ref={cardRef} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#0f172a', width: '460px', padding: '0' }}>
-
-                  {/* Top accent bar */}
-                  <div style={{ height: '5px', background: 'linear-gradient(90deg, #059669, #10b981, #34d399)' }} />
-
-                  {/* Header */}
-                  <div style={{ padding: '32px 36px 22px', background: '#0f172a' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <p style={{ margin: '0 0 6px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: '#475569' }}>Official Receipt</p>
-                        <p style={{ margin: 0, fontSize: '19px', fontWeight: 900, color: '#f8fafc', letterSpacing: '-0.5px' }}>{user?.businessName || 'Morniy Business'}</p>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: '#475569' }}>Receipt No.</p>
-                        <p style={{ margin: 0, fontSize: '13px', fontWeight: 900, color: '#34d399', letterSpacing: '0.5px', fontFamily: 'monospace' }}>{receipt?.receiptNumber}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Amount hero */}
-                  <div style={{ margin: '0 36px 22px', background: 'linear-gradient(135deg, #064e3b, #065f46)', borderRadius: '16px', padding: '22px 28px', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(52,211,153,0.1)' }} />
-                    <p style={{ margin: '0 0 6px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: 'rgba(52,211,153,0.7)' }}>Total Amount Received</p>
-                    <p style={{ margin: 0, fontSize: '34px', fontWeight: 900, color: '#ffffff', letterSpacing: '-1px', lineHeight: 1 }}>{formatCurrency(total)}</p>
-                    <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ color: '#fff', fontSize: '10px', fontWeight: 900 }}>✓</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'rgba(52,211,153,0.8)' }}>Payment Confirmed</p>
-                    </div>
-                  </div>
-
-                  {/* From / Date row */}
-                  <div style={{ padding: '0 36px 18px', display: 'flex', justifyContent: 'space-between' }}>
-                    <div>
-                      <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>Received From</p>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#f1f5f9' }}>{form.payerName}</p>
-                      {form.payerPhone && <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#64748b' }}>{form.payerPhone}</p>}
-                      {form.payerEmail && <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b' }}>{form.payerEmail}</p>}
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>Date</p>
-                      <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>{formattedDate}</p>
-                    </div>
-                  </div>
-
-                  {/* Divider dots — receipt tear look */}
-                  <div style={{ display: 'flex', alignItems: 'center', padding: '0 28px', marginBottom: '0' }}>
-                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#1e293b', flexShrink: 0 }} />
-                    <div style={{ flex: 1, borderTop: '2px dashed #1e293b', margin: '0 4px' }} />
-                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#1e293b', flexShrink: 0 }} />
-                  </div>
-
-                  {/* Itemized list */}
-                  <div style={{ padding: '20px 36px 8px', background: '#0f172a' }}>
-                    <p style={{ margin: '0 0 10px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>
-                      {items.length} Item{items.length !== 1 ? 's' : ''}
-                    </p>
-                    <div style={{ background: '#1e293b', borderRadius: '12px', overflow: 'hidden' }}>
-                      {items.map((item, i) => (
-                        <div key={i} style={{
-                          display: 'flex', justifyContent: 'space-between', gap: '12px',
-                          padding: '12px 16px',
-                          borderBottom: i < items.length - 1 ? '1px solid #334155' : 'none',
-                        }}>
-                          <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', lineHeight: '1.4' }}>{item.description}</span>
-                          <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#f1f5f9', whiteSpace: 'nowrap' }}>{formatCurrency(item.amount)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {form.notes && (
-                    <div style={{ padding: '14px 36px 0' }}>
-                      <div style={{ background: '#1e293b', borderRadius: '12px', padding: '12px 18px' }}>
-                        <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: '#475569' }}>Notes</p>
-                        <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>{form.notes}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Footer with verification QR */}
-                  <div style={{ borderTop: '1px solid #1e293b', marginTop: '22px', padding: '18px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <p style={{ margin: 0, fontSize: '10px', color: '#334155' }}>Issued via <strong style={{ color: '#10b981' }}>Morniy</strong></p>
-                      <p style={{ margin: '3px 0 0', fontSize: '9px', color: '#334155' }}>Scan to verify this receipt</p>
-                    </div>
-                    {qrDataUrl && (
-                      <img src={qrDataUrl} alt="Verify receipt QR" style={{ width: '52px', height: '52px', borderRadius: '8px', background: '#fff', padding: '4px' }} />
-                    )}
-                  </div>
-
-                </div>
-              </div>
-
-              {/* Success badge */}
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2">
-                  <i className="fas fa-check text-base"></i>
-                </div>
-                <p className="text-sm font-black text-emerald-800">Receipt {receipt?.receiptNumber} Created</p>
-                <p className="text-xs text-emerald-600 mt-0.5">For {form.payerName} · {formatCurrency(total)} · {items.length} item{items.length !== 1 ? 's' : ''}</p>
-              </div>
-
-              {/* Share section */}
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Send Receipt</p>
-
-                {/* Primary: native share sheet — picks WhatsApp, Telegram, etc. */}
-                <button
-                  onClick={handleShare}
-                  disabled={isSharing}
-                  className="w-full flex items-center gap-4 px-4 py-3.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors disabled:opacity-60 group"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center flex-shrink-0">
-                    {isSharing
-                      ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      : <i className="fas fa-share-nodes text-base"></i>}
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-black text-white">{isSharing ? 'Generating image...' : 'Share Receipt Image'}</p>
-                    <p className="text-xs text-emerald-100/80">WhatsApp, Telegram, Email & more</p>
-                  </div>
-                  {!isSharing && <i className="fas fa-arrow-right text-white/50 ml-auto group-hover:translate-x-1 transition-transform"></i>}
-                </button>
-
-                {/* Download */}
-                <button
-                  onClick={handleDownload}
-                  disabled={isDownloading}
-                  className="w-full flex items-center gap-4 px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-slate-700 text-white flex items-center justify-center flex-shrink-0">
-                    {isDownloading
-                      ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      : <i className="fas fa-download text-sm"></i>}
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-bold text-slate-800">{isDownloading ? 'Generating...' : 'Download Image'}</p>
-                    <p className="text-xs text-slate-400">Save PNG to your device</p>
-                  </div>
-                </button>
-
-                {/* Email — only if email was provided */}
-                {form.payerEmail && (
-                  <button
-                    onClick={handleSendEmail}
-                    disabled={sendingEmail || emailSent}
-                    className="w-full flex items-center gap-4 px-4 py-3.5 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100 transition-colors disabled:opacity-60"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
-                      {emailSent ? <i className="fas fa-check text-sm"></i> : sendingEmail ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <i className="fas fa-envelope text-sm"></i>}
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-bold text-slate-800">{emailSent ? 'Email Sent!' : 'Send via Email'}</p>
-                      <p className="text-xs text-slate-500 truncate">{form.payerEmail}</p>
-                    </div>
-                  </button>
-                )}
-              </div>
-
-              <a href={publicLink} target="_blank" rel="noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-2.5 border border-emerald-200 rounded-xl text-sm font-bold text-emerald-700 hover:bg-emerald-50 transition-colors">
-                <i className="fas fa-eye text-xs"></i> View Full Receipt Page
-              </a>
-
-              <button onClick={onClose} className="w-full py-2.5 bg-slate-100 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors">
-                Done
-              </button>
-            </div>
-          )}
+          ) : receipt ? (
+            <ReceiptCard receipt={receipt} businessName={user?.businessName} onClose={onClose} />
+          ) : null}
         </div>
       </div>
     </div>
