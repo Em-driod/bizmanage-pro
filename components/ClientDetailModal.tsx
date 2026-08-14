@@ -41,11 +41,11 @@ const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
       setLoading(true);
       try {
         const [txData, invData] = await Promise.all([
-          apiRequest<Transaction[]>(`/transactions?clientId=${client._id}`),
-          apiRequest<Invoice[]>(`/invoices?clientId=${client._id}`),
+          apiRequest<{ data: Transaction[] }>(`/transactions?clientId=${client._id}&limit=100`),
+          apiRequest<{ data: Invoice[] }>(`/invoices?clientId=${client._id}&limit=100`),
         ]);
-        setTransactions(txData);
-        setInvoices(invData);
+        setTransactions(txData.data);
+        setInvoices(invData.data);
       } catch {
         setTransactions([]);
         setInvoices([]);
