@@ -266,7 +266,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 py-4 space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center text-sm font-black flex-shrink-0">
-                {user?.name.charAt(0)}
+                {user?.name?.charAt(0)}
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-black text-slate-900 truncate">{user?.name}</p>
