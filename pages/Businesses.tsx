@@ -5,6 +5,7 @@ import { Business } from '../types';
 import { apiRequest } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import type { Product } from './Products';
 
 interface ServiceItem { name: string; description?: string; price?: number; image?: string; }
 interface ProfileForm {
@@ -56,7 +57,7 @@ const SectionCard: React.FC<{ icon: string; title: string; subtitle?: string; ac
 
 const BusinessPage: React.FC = () => {
   const { user } = useAuth();
-  const { availableCurrencies } = useCurrency();
+  const { availableCurrencies, formatCurrency } = useCurrency();
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -69,6 +70,13 @@ const BusinessPage: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [catalogItems, setCatalogItems] = useState<Product[]>([]);
+
+  useEffect(() => {
+    apiRequest<Product[]>('/products').then(setCatalogItems).catch(() => {});
+  }, []);
+
+  const visibleCatalogItems = catalogItems.filter(p => p.showOnProfile !== false);
 
   const fetchBusiness = async () => {
     if (!user?.businessId) return;
@@ -352,7 +360,7 @@ const BusinessPage: React.FC = () => {
             {[
               { label: 'Currency', val: business?.currency || 'USD', icon: 'fa-coins', bg: 'from-emerald-500 to-teal-500' },
               { label: 'Profile', val: profile.isPublic ? 'Live' : 'Hidden', icon: 'fa-globe', bg: profile.isPublic ? 'from-emerald-500 to-green-500' : 'from-slate-400 to-slate-500' },
-              { label: 'Services', val: `${profile.services.length}`, icon: 'fa-layer-group', bg: 'from-indigo-500 to-violet-500' },
+              { label: 'Items Shown', val: `${visibleCatalogItems.length + profile.services.length}`, icon: 'fa-layer-group', bg: 'from-indigo-500 to-violet-500' },
             ].map((s, i) => (
               <div key={i} className="relative overflow-hidden rounded-xl sm:rounded-2xl p-3 sm:p-4 text-white">
                 <div className={`absolute inset-0 bg-gradient-to-br ${s.bg}`}></div>
@@ -428,7 +436,9 @@ const BusinessPage: React.FC = () => {
                         <p className="text-xs font-black text-white truncate">{business?.name || 'Your Business'}</p>
                         {profile.tagline && <p className="text-[11px] text-white/60 truncate mt-0.5">{profile.tagline}</p>}
                         <p className="text-[10px] text-white/40 mt-1">
-                          {profile.services.length > 0 ? `${profile.services.length} item${profile.services.length !== 1 ? 's' : ''} showing` : 'Add items below to fill out the page'}
+                          {(visibleCatalogItems.length + profile.services.length) > 0
+                            ? `${visibleCatalogItems.length + profile.services.length} item${(visibleCatalogItems.length + profile.services.length) !== 1 ? 's' : ''} showing`
+                            : 'Add items in Catalog to fill out the page'}
                         </p>
                         <a href={qrDataUrl} download={`${(business?.name || 'business').replace(/\s+/g, '-').toLowerCase()}-qr-code.png`}
                           className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-black text-white bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-all border border-white/10">
@@ -617,6 +627,44 @@ const BusinessPage: React.FC = () => {
                 </div>
               </div>
             </div>
+          </SectionCard>
+
+          {/* Catalog preview — read-only, sourced live from Catalog so it can't go stale */}
+          <SectionCard
+            icon="fa-box-open" title="From Your Catalog"
+            subtitle={`${visibleCatalogItems.length} item${visibleCatalogItems.length !== 1 ? 's' : ''} · shown on your public page automatically`}
+            accent="#4f46e5"
+            action={
+              <Link to="/products"
+                className="flex items-center gap-1.5 text-xs font-black text-indigo-600 hover:text-indigo-800 px-3 py-2 rounded-xl transition-all">
+                Edit in Catalog <i className="fas fa-arrow-right text-[10px]" />
+              </Link>
+            }>
+            {visibleCatalogItems.length === 0 ? (
+              <div className="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl">
+                <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
+                  <i className="fas fa-box-open text-2xl text-slate-200"></i>
+                </div>
+                <p className="text-slate-400 text-sm font-semibold">No catalog items yet</p>
+                <Link to="/products" className="inline-block mt-3 text-xs font-black text-indigo-600 hover:text-indigo-800">
+                  Add your first product in Catalog →
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {visibleCatalogItems.map(p => (
+                  <div key={p._id} className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                    <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {p.image ? <img src={p.image} alt={p.name} className="w-full h-full object-cover" /> : <i className="fas fa-box text-slate-200"></i>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-slate-800 truncate">{p.name}</p>
+                      <p className="text-xs text-indigo-600 font-black">{formatCurrency(p.price)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </SectionCard>
 
           {/* Services */}
