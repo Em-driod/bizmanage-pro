@@ -45,7 +45,7 @@ const Products: React.FC = () => {
     name: '',
     description: '',
     price: '',
-    unit: 'unit',
+    unit: '',
     category: '',
     image: '',
     trackStock: false,
@@ -67,7 +67,7 @@ const Products: React.FC = () => {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ name: '', description: '', price: '', unit: 'unit', category: '', image: '', trackStock: false, stock: '' });
+    setForm({ name: '', description: '', price: '', unit: '', category: '', image: '', trackStock: false, stock: '' });
     setShowForm(true);
   };
 
@@ -77,7 +77,7 @@ const Products: React.FC = () => {
       name: p.name,
       description: p.description || '',
       price: String(p.price),
-      unit: p.unit || 'unit',
+      unit: p.unit && p.unit !== 'unit' ? p.unit : '',
       category: p.category || '',
       image: p.image || '',
       trackStock: !!p.trackStock,
