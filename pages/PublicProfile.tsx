@@ -322,7 +322,7 @@ const PublicProfile: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════════════════
           MAIN CONTENT
       ══════════════════════════════════════════════════════════════════════ */}
-      <div className="max-w-4xl mx-auto px-5 sm:px-8 pb-36 space-y-6 pt-8">
+      <div className="max-w-4xl mx-auto px-5 sm:px-8 pb-36 space-y-8 sm:space-y-10 pt-10">
 
         {/* ── Primary CTA ── */}
         {(waLink || profile.email) && (
@@ -460,9 +460,9 @@ const PublicProfile: React.FC = () => {
                     )}
                     {/* Text */}
                     <div className="p-5">
-                      <p className="font-black text-white text-base leading-tight mb-1">{svc.name}</p>
+                      <p className="font-semibold text-white text-base leading-tight mb-1 tracking-tight">{svc.name}</p>
                       {svc.description && (
-                        <p className="text-white/45 text-sm leading-relaxed">{svc.description}</p>
+                        <p className="text-white/40 text-sm leading-relaxed">{svc.description}</p>
                       )}
                       <div className="flex items-center gap-3 mt-3">
                         {!svc.image && svc.price !== undefined && (
@@ -501,15 +501,15 @@ const PublicProfile: React.FC = () => {
                     </span>
                     {/* Details */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-black text-white text-sm sm:text-base">{svc.name}</p>
+                      <p className="font-semibold text-white text-sm sm:text-base tracking-tight">{svc.name}</p>
                       {svc.description && (
-                        <p className="text-white/40 text-xs sm:text-sm mt-0.5 leading-relaxed">{svc.description}</p>
+                        <p className="text-white/35 text-xs sm:text-sm mt-0.5 leading-relaxed">{svc.description}</p>
                       )}
                     </div>
                     {/* Price + stock */}
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       {svc.price !== undefined && (
-                        <span className="text-sm sm:text-base font-black" style={{ color: accent }}>
+                        <span className="text-sm sm:text-base font-bold" style={{ color: accent }}>
                           {fmt(svc.price)}
                         </span>
                       )}

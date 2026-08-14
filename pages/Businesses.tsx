@@ -37,15 +37,15 @@ const toBase64 = (file: File): Promise<string> => new Promise((res, rej) => {
 const inputCls = 'w-full h-11 px-4 bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 outline-none transition-all text-sm placeholder:text-slate-300';
 const labelCls = 'block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5';
 
-const SectionCard: React.FC<{ icon: string; title: string; subtitle?: string; accent?: string; children: React.ReactNode; action?: React.ReactNode }> = ({ icon, title, subtitle, accent = '#6366f1', children, action }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
+const SectionCard: React.FC<{ icon: string; title: string; subtitle?: string; accent?: string; children: React.ReactNode; action?: React.ReactNode }> = ({ icon, title, subtitle, children, action }) => (
+  <div className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">
+    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs" style={{ background: accent }}>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-50 border border-slate-100 text-slate-500 text-xs">
           <i className={`fas ${icon}`}></i>
         </div>
         <div>
-          <p className="text-sm font-black text-slate-800">{title}</p>
+          <p className="text-sm font-bold text-slate-900 tracking-tight">{title}</p>
           {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
         </div>
       </div>
@@ -261,27 +261,23 @@ const BusinessPage: React.FC = () => {
           {/* Public profile promo */}
           {!profile.isPublic && (
             <button type="button" onClick={() => setActiveTab('profile')}
-              className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-left group transition-all"
-              style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #9333ea 100%)', boxShadow: '0 8px 32px rgba(99,102,241,0.35)' }}>
-              <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0 border border-white/10">
-                <i className="fas fa-rocket text-white text-sm"></i>
+              className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-left group transition-all bg-white border border-slate-200/70 hover:border-slate-300 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-rocket text-indigo-600 text-sm"></i>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-white leading-tight">Launch Your Public Business Page</p>
-                <p className="text-xs text-indigo-200/70 mt-0.5 hidden sm:block">Showcase services, logo & social links — share with anyone free</p>
+                <p className="text-sm font-bold text-slate-900 leading-tight">Launch Your Public Business Page</p>
+                <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">Showcase services, logo & social links — share with anyone free</p>
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
-                <span className="px-3 py-1.5 bg-white text-indigo-700 text-xs font-black rounded-xl shadow whitespace-nowrap">Get Started</span>
-                <i className="fas fa-arrow-right text-white/50 text-xs group-hover:translate-x-1 transition-transform"></i>
+                <span className="px-3 py-1.5 bg-slate-900 text-white text-xs font-black rounded-xl whitespace-nowrap">Get Started</span>
+                <i className="fas fa-arrow-right text-slate-300 text-xs group-hover:translate-x-1 transition-transform"></i>
               </div>
             </button>
           )}
 
           {/* Info card */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            {/* Card top strip */}
-            <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-violet-500 to-blue-500"></div>
-
+          <div className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">
             <div className="p-6">
               {!isEditing ? (
                 <>
@@ -295,15 +291,14 @@ const BusinessPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
-                      { label: 'Business Name', val: business?.name, icon: 'fa-id-card', color: '#6366f1' },
-                      { label: 'Email Address', val: (business as any)?.email, icon: 'fa-envelope', color: '#8b5cf6' },
-                      { label: 'Phone Number', val: (business as any)?.phone, icon: 'fa-phone', color: '#ec4899' },
-                      { label: 'Address', val: (business as any)?.address, icon: 'fa-location-dot', color: '#f59e0b' },
-                      { label: 'Currency', val: business?.currency || 'USD', icon: 'fa-coins', color: '#10b981' },
+                      { label: 'Business Name', val: business?.name, icon: 'fa-id-card' },
+                      { label: 'Email Address', val: (business as any)?.email, icon: 'fa-envelope' },
+                      { label: 'Phone Number', val: (business as any)?.phone, icon: 'fa-phone' },
+                      { label: 'Address', val: (business as any)?.address, icon: 'fa-location-dot' },
+                      { label: 'Currency', val: business?.currency || 'USD', icon: 'fa-coins' },
                     ].map((f, i) => (
                       <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 hover:bg-slate-100/70 transition-colors group">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-xs transition-transform group-hover:scale-110"
-                          style={{ background: f.color }}>
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-white border border-slate-100 text-slate-500 text-xs">
                           <i className={`fas ${f.icon}`}></i>
                         </div>
                         <div className="min-w-0">
@@ -346,7 +341,7 @@ const BusinessPage: React.FC = () => {
                       Cancel
                     </button>
                     <button type="submit"
-                      className="flex-1 h-11 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl font-black text-sm shadow-lg shadow-indigo-200 transition-all">
+                      className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-all">
                       Save Changes
                     </button>
                   </div>
@@ -358,19 +353,20 @@ const BusinessPage: React.FC = () => {
           {/* Quick stats row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             {[
-              { label: 'Currency', val: business?.currency || 'USD', icon: 'fa-coins', bg: 'from-emerald-500 to-teal-500' },
-              { label: 'Profile', val: profile.isPublic ? 'Live' : 'Hidden', icon: 'fa-globe', bg: profile.isPublic ? 'from-emerald-500 to-green-500' : 'from-slate-400 to-slate-500' },
-              { label: 'Items Shown', val: `${visibleCatalogItems.length + profile.services.length}`, icon: 'fa-layer-group', bg: 'from-indigo-500 to-violet-500' },
-              { label: 'Page Views', val: `${business?.profileViews || 0}`, icon: 'fa-eye', bg: 'from-amber-500 to-orange-500' },
+              { label: 'Currency', val: business?.currency || 'USD', icon: 'fa-coins', showDot: false, live: false },
+              { label: 'Profile', val: profile.isPublic ? 'Live' : 'Hidden', icon: 'fa-globe', showDot: true, live: profile.isPublic },
+              { label: 'Items Shown', val: `${visibleCatalogItems.length + profile.services.length}`, icon: 'fa-layer-group', showDot: false, live: false },
+              { label: 'Page Views', val: `${business?.profileViews || 0}`, icon: 'fa-eye', showDot: false, live: false },
             ].map((s, i) => (
-              <div key={i} className="relative overflow-hidden rounded-xl sm:rounded-2xl p-3 sm:p-4 text-white">
-                <div className={`absolute inset-0 bg-gradient-to-br ${s.bg}`}></div>
-                <div className="absolute -bottom-3 -right-3 w-12 h-12 rounded-full bg-white/10"></div>
-                <div className="relative z-10">
-                  <i className={`fas ${s.icon} text-white/60 text-xs mb-1.5 block`}></i>
-                  <p className="text-base sm:text-lg font-black leading-none">{s.val}</p>
-                  <p className="text-[9px] sm:text-[10px] font-bold text-white/60 uppercase tracking-widest mt-1">{s.label}</p>
+              <div key={i} className="rounded-xl sm:rounded-2xl p-3 sm:p-4 bg-white border border-slate-200/70">
+                <div className="flex items-center justify-between mb-1.5">
+                  <i className={`fas ${s.icon} text-slate-300 text-xs`}></i>
+                  {s.showDot && (
+                    <span className={`w-1.5 h-1.5 rounded-full ${s.live ? 'bg-emerald-500' : 'bg-slate-200'}`}></span>
+                  )}
                 </div>
+                <p className="text-base sm:text-lg font-black leading-none text-slate-900">{s.val}</p>
+                <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{s.label}</p>
               </div>
             ))}
           </div>
@@ -382,19 +378,13 @@ const BusinessPage: React.FC = () => {
         <form onSubmit={handleProfileSave} className="space-y-5 max-w-3xl">
 
           {/* Published toggle */}
-          <div className={`relative overflow-hidden rounded-2xl p-5 transition-all ${profile.isPublic ? 'bg-gradient-to-r from-emerald-600 to-teal-600' : 'bg-white border border-slate-100 shadow-sm'}`}>
-            {profile.isPublic && (
-              <>
-                <div className="absolute top-[-30px] right-[-30px] w-40 h-40 rounded-full bg-white/10 pointer-events-none"></div>
-                <div className="absolute bottom-[-20px] left-[30%] w-24 h-24 rounded-full bg-white/5 pointer-events-none"></div>
-              </>
-            )}
-            <div className="relative z-10 flex items-center justify-between gap-4">
+          <div className={`rounded-2xl p-5 transition-all border ${profile.isPublic ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-slate-200/70'}`}>
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <p className={`font-black text-sm ${profile.isPublic ? 'text-white' : 'text-slate-800'}`}>
-                  {profile.isPublic ? '🟢 Profile is Live' : 'Make Profile Public'}
+                <p className={`font-bold text-sm ${profile.isPublic ? 'text-white' : 'text-slate-900'}`}>
+                  {profile.isPublic ? 'Profile is Live' : 'Make Profile Public'}
                 </p>
-                <p className={`text-xs mt-0.5 ${profile.isPublic ? 'text-emerald-100/80' : 'text-slate-400'}`}>
+                <p className={`text-xs mt-0.5 ${profile.isPublic ? 'text-emerald-50/80' : 'text-slate-400'}`}>
                   {profile.isPublic ? 'Anyone with the link can discover your business' : 'Anyone with the link can view your profile — no login needed'}
                 </p>
               </div>
@@ -404,7 +394,7 @@ const BusinessPage: React.FC = () => {
               </button>
             </div>
             {profile.isPublic && shareUrl && (
-              <div className="relative z-10 mt-4 space-y-3">
+              <div className="mt-4 space-y-3">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white/15 border border-white/20 rounded-xl px-3 py-2.5 backdrop-blur-sm">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <i className="fas fa-link text-white/60 text-xs shrink-0" />
@@ -458,13 +448,13 @@ const BusinessPage: React.FC = () => {
           </div>
 
           {/* Brand builder card */}
-          <div className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-white">
-            <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-50">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs">
+          <div className="rounded-2xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden bg-white">
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-50 border border-slate-100 text-slate-500 text-xs">
                 <i className="fas fa-palette"></i>
               </div>
               <div>
-                <p className="text-sm font-black text-slate-800">Brand Identity</p>
+                <p className="text-sm font-bold text-slate-900 tracking-tight">Brand Identity</p>
                 <p className="text-xs text-slate-400">Cover photo, logo & brand colour</p>
               </div>
             </div>
@@ -675,7 +665,7 @@ const BusinessPage: React.FC = () => {
             accent="#ec4899"
             action={
               <button type="button" onClick={addService}
-                className="flex items-center gap-1.5 text-xs font-black text-white bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 px-3 py-2 rounded-xl transition-all shadow-sm">
+                className="flex items-center gap-1.5 text-xs font-black text-white bg-slate-900 hover:bg-slate-800 px-3 py-2 rounded-xl transition-all">
                 <i className="fas fa-plus text-[10px]" /> Add Item
               </button>
             }>
@@ -780,7 +770,7 @@ const BusinessPage: React.FC = () => {
                   </span>
                 )}
                 <button type="submit" disabled={profileSaving}
-                  className="flex items-center gap-2 px-6 h-11 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl font-black text-sm shadow-lg shadow-indigo-200 transition-all disabled:opacity-60">
+                  className="flex items-center gap-2 px-6 h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-60">
                   {profileSaving
                     ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving...</>
                     : <><i className="fas fa-cloud-arrow-up text-xs"></i> Save Profile</>
