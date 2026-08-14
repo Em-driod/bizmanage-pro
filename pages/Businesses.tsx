@@ -356,11 +356,12 @@ const BusinessPage: React.FC = () => {
           </div>
 
           {/* Quick stats row */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             {[
               { label: 'Currency', val: business?.currency || 'USD', icon: 'fa-coins', bg: 'from-emerald-500 to-teal-500' },
               { label: 'Profile', val: profile.isPublic ? 'Live' : 'Hidden', icon: 'fa-globe', bg: profile.isPublic ? 'from-emerald-500 to-green-500' : 'from-slate-400 to-slate-500' },
               { label: 'Items Shown', val: `${visibleCatalogItems.length + profile.services.length}`, icon: 'fa-layer-group', bg: 'from-indigo-500 to-violet-500' },
+              { label: 'Page Views', val: `${business?.profileViews || 0}`, icon: 'fa-eye', bg: 'from-amber-500 to-orange-500' },
             ].map((s, i) => (
               <div key={i} className="relative overflow-hidden rounded-xl sm:rounded-2xl p-3 sm:p-4 text-white">
                 <div className={`absolute inset-0 bg-gradient-to-br ${s.bg}`}></div>

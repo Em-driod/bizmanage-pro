@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../constants';
 
-interface ServiceItem { name: string; description?: string; price?: number; image?: string; }
+interface ServiceItem { name: string; description?: string; price?: number; image?: string; inStock?: number; }
 
 interface ProfileData {
   name: string;
@@ -439,6 +439,14 @@ const PublicProfile: React.FC = () => {
                         />
                         {/* Gradient overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-[#0c0c0c]/20 to-transparent" />
+                        {/* Stock badge */}
+                        {svc.inStock !== undefined && (
+                          <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-black backdrop-blur-md border ${
+                            svc.inStock > 0 ? 'text-white bg-black/40 border-white/10' : 'text-white bg-rose-600/80 border-rose-400/20'
+                          }`}>
+                            {svc.inStock > 0 ? `${svc.inStock} left` : 'Sold out'}
+                          </div>
+                        )}
                         {/* Price badge */}
                         {svc.price !== undefined && (
                           <div
@@ -456,9 +464,16 @@ const PublicProfile: React.FC = () => {
                       {svc.description && (
                         <p className="text-white/45 text-sm leading-relaxed">{svc.description}</p>
                       )}
-                      {!svc.image && svc.price !== undefined && (
-                        <p className="text-base font-black mt-3" style={{ color: accent }}>{fmt(svc.price)}</p>
-                      )}
+                      <div className="flex items-center gap-3 mt-3">
+                        {!svc.image && svc.price !== undefined && (
+                          <p className="text-base font-black" style={{ color: accent }}>{fmt(svc.price)}</p>
+                        )}
+                        {!svc.image && svc.inStock !== undefined && (
+                          <p className={`text-xs font-bold ${svc.inStock > 0 ? 'text-white/40' : 'text-rose-400'}`}>
+                            {svc.inStock > 0 ? `${svc.inStock} left` : 'Sold out'}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -491,15 +506,19 @@ const PublicProfile: React.FC = () => {
                         <p className="text-white/40 text-xs sm:text-sm mt-0.5 leading-relaxed">{svc.description}</p>
                       )}
                     </div>
-                    {/* Price */}
-                    {svc.price !== undefined && (
-                      <span
-                        className="text-sm sm:text-base font-black flex-shrink-0"
-                        style={{ color: accent }}
-                      >
-                        {fmt(svc.price)}
-                      </span>
-                    )}
+                    {/* Price + stock */}
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      {svc.price !== undefined && (
+                        <span className="text-sm sm:text-base font-black" style={{ color: accent }}>
+                          {fmt(svc.price)}
+                        </span>
+                      )}
+                      {svc.inStock !== undefined && (
+                        <span className={`text-[10px] font-bold ${svc.inStock > 0 ? 'text-white/35' : 'text-rose-400'}`}>
+                          {svc.inStock > 0 ? `${svc.inStock} left` : 'Sold out'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

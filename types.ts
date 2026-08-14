@@ -20,6 +20,7 @@ export interface Business {
   email: string;
   phone: string;
   currency: string;
+  profileViews?: number;
 }
 
 export interface Client {
