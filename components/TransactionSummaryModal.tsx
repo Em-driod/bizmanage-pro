@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Transaction } from '../types';
 import { apiRequest, getErrorMessage } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
@@ -48,6 +49,7 @@ const TransactionSummaryModal: React.FC<Props> = ({ onClose }) => {
   const formattedRange = `${new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} – ${new Date(endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm print:hidden">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
         <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-5 flex items-center justify-between flex-shrink-0">
@@ -131,9 +133,10 @@ const TransactionSummaryModal: React.FC<Props> = ({ onClose }) => {
           )}
         </div>
       </div>
+    </div>
 
-      {/* Printable summary — hidden on screen, shown only via @media print */}
-      {results && (
+      {/* Printable summary, portaled to <body> — hidden on screen, shown only via @media print */}
+      {results && createPortal(
         <div className="print-only p-12 bg-white text-slate-900 font-sans" id="tx-summary-print-area">
           <style dangerouslySetInnerHTML={{
             __html: `
@@ -199,9 +202,10 @@ const TransactionSummaryModal: React.FC<Props> = ({ onClose }) => {
           </table>
 
           <p className="text-[10px] text-slate-400 font-black uppercase tracking-[3px] text-center">Generated via Morniy</p>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 };
 

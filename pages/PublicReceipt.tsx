@@ -12,7 +12,13 @@ interface ReceiptData {
   description: string;
   date: string;
   notes?: string;
+  items?: { description: string; amount: number; quantity?: number }[];
 }
+
+const lineParts = (item: { amount: number; quantity?: number }) => {
+  const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
+  return { qty, unitPrice: item.amount / qty };
+};
 
 interface BusinessData {
   name: string;
@@ -102,7 +108,15 @@ const PublicReceipt: React.FC = () => {
       </div>
 
       {/* Receipt card */}
-      <div ref={cardRef} className="max-w-lg mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div ref={cardRef} className="relative max-w-lg mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
+        {/* Ink stamp */}
+        <div className="absolute top-24 right-8 w-24 h-24 rounded-full border-[3px] border-double border-rose-600/50 flex items-center justify-center rotate-[-16deg] pointer-events-none z-10">
+          <div className="flex flex-col items-center">
+            <span className="text-sm font-black text-rose-600/75 tracking-wider">PAID</span>
+            <span className="text-[6px] font-bold text-rose-600/60 tracking-[2px] mt-0.5">MORNIY VERIFIED</span>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="bg-gradient-to-br from-emerald-600 to-emerald-500 px-8 py-8">
           <div className="flex items-start justify-between">
@@ -142,8 +156,27 @@ const PublicReceipt: React.FC = () => {
           </div>
 
           <div className="border-t border-slate-100 pt-4">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Payment For</p>
-            <p className="text-sm text-slate-700 leading-relaxed">{receipt.description}</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              {receipt.items?.length ? `${receipt.items.length} Item${receipt.items.length !== 1 ? 's' : ''}` : 'Payment For'}
+            </p>
+            {receipt.items?.length ? (
+              <div className="border border-slate-100 rounded-xl overflow-hidden">
+                {receipt.items.map((item, i) => {
+                  const { qty, unitPrice } = lineParts(item);
+                  return (
+                    <div key={i} className={`flex items-center justify-between px-4 py-2.5 ${i > 0 ? 'border-t border-slate-50' : ''}`}>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-800 truncate">{item.description}</p>
+                        {qty > 1 && <p className="text-[11px] text-slate-400">{qty} × {formatAmount(unitPrice, receipt.currency)}</p>}
+                      </div>
+                      <p className="text-sm font-black text-slate-900 shrink-0 ml-3">{formatAmount(item.amount, receipt.currency)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-700 leading-relaxed">{receipt.description}</p>
+            )}
           </div>
 
           {receipt.notes && (

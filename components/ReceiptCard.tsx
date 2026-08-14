@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { apiRequest } from '../services/api';
@@ -15,7 +16,7 @@ export interface ReceiptData {
   date: string;
   notes?: string;
   publicToken: string;
-  items: { description: string; amount: number }[];
+  items: { description: string; amount: number; quantity?: number }[];
 }
 
 interface Props {
@@ -23,6 +24,11 @@ interface Props {
   businessName?: string;
   onClose: () => void;
 }
+
+const lineParts = (item: { amount: number; quantity?: number }) => {
+  const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
+  return { qty, unitPrice: item.amount / qty };
+};
 
 const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
   const { formatCurrency } = useCurrency();
@@ -107,12 +113,25 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
   };
 
   return (
+    <>
     <div className="p-6 space-y-4 print:hidden">
 
       {/* Hidden receipt card for image capture */}
       <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '460px' }} aria-hidden="true">
-        <div ref={cardRef} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#0f172a', width: '460px', padding: '0' }}>
+        <div ref={cardRef} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#0f172a', width: '460px', padding: '0', position: 'relative' }}>
           <div style={{ height: '5px', background: 'linear-gradient(90deg, #059669, #10b981, #34d399)' }} />
+
+          {/* Ink stamp */}
+          <div style={{
+            position: 'absolute', top: '58px', right: '30px', width: '92px', height: '92px', borderRadius: '50%',
+            border: '3px double rgba(244,63,94,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transform: 'rotate(-16deg)', pointerEvents: 'none',
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span style={{ fontSize: '16px', fontWeight: 900, color: 'rgba(244,63,94,0.75)', letterSpacing: '1.5px' }}>PAID</span>
+              <span style={{ fontSize: '6px', fontWeight: 700, color: 'rgba(244,63,94,0.6)', letterSpacing: '1.5px', marginTop: '2px' }}>MORNIY VERIFIED</span>
+            </div>
+          </div>
 
           <div style={{ padding: '32px 36px 22px', background: '#0f172a' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -163,16 +182,24 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
               {items.length} Item{items.length !== 1 ? 's' : ''}
             </p>
             <div style={{ background: '#1e293b', borderRadius: '12px', overflow: 'hidden' }}>
-              {items.map((item, i) => (
-                <div key={i} style={{
-                  display: 'flex', justifyContent: 'space-between', gap: '12px',
-                  padding: '12px 16px',
-                  borderBottom: i < items.length - 1 ? '1px solid #334155' : 'none',
-                }}>
-                  <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', lineHeight: '1.4' }}>{item.description}</span>
-                  <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#f1f5f9', whiteSpace: 'nowrap' }}>{formatCurrency(item.amount)}</span>
-                </div>
-              ))}
+              {items.map((item, i) => {
+                const { qty, unitPrice } = lineParts(item);
+                return (
+                  <div key={i} style={{
+                    display: 'flex', justifyContent: 'space-between', gap: '12px',
+                    padding: '12px 16px',
+                    borderBottom: i < items.length - 1 ? '1px solid #334155' : 'none',
+                  }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', lineHeight: '1.4' }}>{item.description}</div>
+                      {qty > 1 && (
+                        <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>{qty} × {formatCurrency(unitPrice)}</div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#f1f5f9', whiteSpace: 'nowrap' }}>{formatCurrency(item.amount)}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -204,6 +231,22 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
         </div>
         <p className="text-sm font-black text-emerald-800">Receipt {receipt.receiptNumber}</p>
         <p className="text-xs text-emerald-600 mt-0.5">For {receipt.payerName} · {formatCurrency(receipt.amount)} · {items.length} item{items.length !== 1 ? 's' : ''}</p>
+      </div>
+
+      {/* Itemized preview */}
+      <div className="border border-slate-100 rounded-xl overflow-hidden">
+        {items.map((item, i) => {
+          const { qty, unitPrice } = lineParts(item);
+          return (
+            <div key={i} className={`flex items-center justify-between px-4 py-2.5 ${i > 0 ? 'border-t border-slate-50' : ''}`}>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-700 truncate">{item.description}</p>
+                {qty > 1 && <p className="text-[10px] text-slate-400">{qty} × {formatCurrency(unitPrice)}</p>}
+              </div>
+              <p className="text-xs font-black text-slate-800 shrink-0 ml-3">{formatCurrency(item.amount)}</p>
+            </div>
+          );
+        })}
       </div>
 
       {/* Actions */}
@@ -277,80 +320,102 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
       <button onClick={onClose} className="w-full py-2.5 bg-slate-100 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors">
         Done
       </button>
+    </div>
 
-      {/* Printable version — hidden on screen, shown only via @media print */}
-      <div className="print-only p-12 bg-white text-slate-900 font-sans" id="receipt-card-print-area">
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            @media screen { .print-only { display: none !important; } }
-            @media print {
-              .print-only { display: block !important; }
-              body * { visibility: hidden; }
-              #receipt-card-print-area, #receipt-card-print-area * { visibility: visible; }
-              #receipt-card-print-area { position: absolute; left: 0; top: 0; width: 100%; }
-            }
-          `
-        }} />
+    {/* Printable version, portaled straight to <body> — hidden on screen, shown only via
+        @media print. Rendering it inline would put it inside whatever modal box is currently
+        showing this card, and a display:none/overflow:hidden ancestor from that modal would
+        hide or clip it even with !important on this element itself. */}
+    {createPortal(
+    <div className="print-only relative p-12 bg-white text-slate-900 font-sans" id="receipt-card-print-area">
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @media screen { .print-only { display: none !important; } }
+          @media print {
+            .print-only { display: block !important; }
+            body * { visibility: hidden; }
+            #receipt-card-print-area, #receipt-card-print-area * { visibility: visible; }
+            #receipt-card-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+          }
+        `
+      }} />
 
-        <div className="flex justify-between items-start mb-10 border-b-2 border-slate-100 pb-8">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-emerald-700 mb-1">{businessName || 'Morniy Business'}</h1>
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Official Receipt</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Receipt No.</p>
-            <p className="text-xl font-black text-slate-900">{receipt.receiptNumber}</p>
-          </div>
+      {/* Ink stamp */}
+      <div className="absolute top-14 right-16 w-24 h-24 rounded-full border-[3px] border-double border-rose-600/50 flex items-center justify-center rotate-[-16deg] pointer-events-none">
+        <div className="flex flex-col items-center">
+          <span className="text-sm font-black text-rose-600/75 tracking-wider">PAID</span>
+          <span className="text-[6px] font-bold text-rose-600/60 tracking-[2px] mt-0.5">MORNIY VERIFIED</span>
         </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-8 mb-10">
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] mb-1">Received From</p>
-            <p className="text-base font-bold text-slate-900">{receipt.payerName}</p>
-            {receipt.payerEmail && <p className="text-sm text-slate-500">{receipt.payerEmail}</p>}
-            {receipt.payerPhone && <p className="text-sm text-slate-500">{receipt.payerPhone}</p>}
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] mb-1">Date</p>
-            <p className="text-base font-bold text-slate-900">{formattedDate}</p>
-            <p className="text-sm font-black text-emerald-600 mt-2 uppercase tracking-widest">Paid in Full</p>
-          </div>
+      <div className="flex justify-between items-start mb-10 border-b-2 border-slate-100 pb-8">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-emerald-700 mb-1">{businessName || 'Morniy Business'}</h1>
+          <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Official Receipt</p>
         </div>
+        <div className="text-right">
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Receipt No.</p>
+          <p className="text-xl font-black text-slate-900">{receipt.receiptNumber}</p>
+        </div>
+      </div>
 
-        <table className="w-full mb-10">
-          <thead className="border-b border-slate-200">
-            <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              <th className="py-3 text-left">Description</th>
-              <th className="py-3 text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {items.map((item, i) => (
+      <div className="grid grid-cols-2 gap-8 mb-10">
+        <div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] mb-1">Received From</p>
+          <p className="text-base font-bold text-slate-900">{receipt.payerName}</p>
+          {receipt.payerEmail && <p className="text-sm text-slate-500">{receipt.payerEmail}</p>}
+          {receipt.payerPhone && <p className="text-sm text-slate-500">{receipt.payerPhone}</p>}
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] mb-1">Date</p>
+          <p className="text-base font-bold text-slate-900">{formattedDate}</p>
+          <p className="text-sm font-black text-emerald-600 mt-2 uppercase tracking-widest">Paid in Full</p>
+        </div>
+      </div>
+
+      <table className="w-full mb-10">
+        <thead className="border-b border-slate-200">
+          <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <th className="py-3 text-left">Description</th>
+            <th className="py-3 text-center w-20">Qty</th>
+            <th className="py-3 text-right w-32">Unit Price</th>
+            <th className="py-3 text-right w-32">Amount</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-50">
+          {items.map((item, i) => {
+            const { qty, unitPrice } = lineParts(item);
+            return (
               <tr key={i} className="text-sm">
                 <td className="py-3 font-bold text-slate-800">{item.description}</td>
+                <td className="py-3 text-center text-slate-500">{qty}</td>
+                <td className="py-3 text-right text-slate-500">{formatCurrency(unitPrice)}</td>
                 <td className="py-3 text-right font-black text-slate-900">{formatCurrency(item.amount)}</td>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            );
+          })}
+        </tbody>
+      </table>
 
-        <div className="flex justify-end mb-12">
-          <div className="w-64 pt-3 border-t-2 border-slate-900 flex justify-between items-center">
-            <span className="text-base font-black text-slate-900 uppercase tracking-tighter">Total</span>
-            <span className="text-xl font-black text-emerald-700">{formatCurrency(receipt.amount)}</span>
-          </div>
+      <div className="flex justify-end mb-12">
+        <div className="w-64 pt-3 border-t-2 border-slate-900 flex justify-between items-center">
+          <span className="text-base font-black text-slate-900 uppercase tracking-tighter">Total</span>
+          <span className="text-xl font-black text-emerald-700">{formatCurrency(receipt.amount)}</span>
         </div>
-
-        {receipt.notes && (
-          <div className="mb-10">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] mb-2">Notes</p>
-            <p className="text-sm text-slate-600 leading-relaxed italic">{receipt.notes}</p>
-          </div>
-        )}
-
-        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[3px] text-center">Generated via Morniy</p>
       </div>
-    </div>
+
+      {receipt.notes && (
+        <div className="mb-10">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] mb-2">Notes</p>
+          <p className="text-sm text-slate-600 leading-relaxed italic">{receipt.notes}</p>
+        </div>
+      )}
+
+      <p className="text-[10px] text-slate-400 font-black uppercase tracking-[3px] text-center">Generated via Morniy</p>
+    </div>,
+    document.body
+    )}
+    </>
   );
 };
 
