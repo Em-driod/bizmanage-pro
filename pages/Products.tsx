@@ -430,14 +430,15 @@ const Products: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Unit</label>
+                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Sold Per</label>
                   <input
                     type="text"
-                    placeholder="unit, hour, month…"
+                    placeholder="50mls, bottle, hour…"
                     value={form.unit}
                     onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
                     className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">What one unit is — a label, not a count</p>
                 </div>
               </div>
 
@@ -457,7 +458,7 @@ const Products: React.FC = () => {
                 </label>
                 {form.trackStock && (
                   <div className="mt-3">
-                    <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Stock Quantity</label>
+                    <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Units in Stock</label>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -469,6 +470,12 @@ const Products: React.FC = () => {
                       }}
                       className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                     />
+                    {form.stock !== '' && !isNaN(parseInt(form.stock, 10)) && (
+                      <p className="text-[10px] text-slate-400 mt-1.5">
+                        <i className="fas fa-circle-info text-indigo-400 mr-1"></i>
+                        You have {parseInt(form.stock, 10)} {form.unit ? `× ${form.unit}` : 'unit(s)'} in stock
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
