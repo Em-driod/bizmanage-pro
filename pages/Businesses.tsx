@@ -187,67 +187,47 @@ const BusinessPage: React.FC = () => {
     <div className="min-h-screen pb-24 lg:pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
 
       {/* ── Page Hero ── */}
-      <div className="relative overflow-hidden rounded-3xl mb-8 bg-[#0c0c1d]" style={{ minHeight: 200 }}>
-        {/* Background orbs */}
-        <div className="absolute top-[-60px] left-[-60px] w-72 h-72 rounded-full blur-[100px] opacity-50 bg-indigo-600 pointer-events-none" />
-        <div className="absolute bottom-[-40px] right-[10%] w-56 h-56 rounded-full blur-[80px] opacity-30 bg-violet-500 pointer-events-none" />
-        <div className="absolute top-[20%] right-[-20px] w-40 h-40 rounded-full blur-[60px] opacity-20 bg-blue-400 pointer-events-none" />
-
-        {/* Noise texture overlay */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
-
-        <div className="relative z-10 px-5 sm:px-10 py-7 flex flex-row items-center gap-4">
+      <div className="mb-8">
+        <div className="flex items-center gap-4 mb-7">
           {/* Avatar */}
-          <div className="relative flex-shrink-0">
-            <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-2xl shadow-indigo-900/60 border border-white/10" style={{ width: 56, height: 56 }}>
-              <span className="text-white font-black text-xl tracking-tight">{initials}</span>
-            </div>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#0c0c1d]"></div>
+          <div className="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-sm tracking-tight">{initials}</span>
           </div>
 
           {/* Text */}
           <div className="flex-1 min-w-0">
-            <span className="text-[9px] font-black uppercase tracking-widest text-indigo-300/50">Workspace</span>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight truncate">{business?.name || 'Your Business'}</h1>
-            <p className="text-xs text-white/35 font-medium truncate">{(business as any)?.email || 'No email set'}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Workspace</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-tight truncate">{business?.name || 'Your Business'}</h1>
           </div>
 
-          {/* Status pill — compact on mobile */}
-          <div className="flex-shrink-0">
-            {profile.isPublic
-              ? <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 border border-emerald-400/30 rounded-xl">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-[11px] font-black text-emerald-300 hidden sm:inline">Profile Live</span>
-                  <span className="text-[11px] font-black text-emerald-300 sm:hidden">Live</span>
-                </div>
-              : <button onClick={() => setActiveTab('profile')} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all">
-                  <i className="fas fa-globe text-white/60 text-[11px]"></i>
-                  <span className="text-[11px] font-black text-white/60 hidden sm:inline">Set Up Profile</span>
-                  <span className="text-[11px] font-black text-white/60 sm:hidden">Profile</span>
-                </button>
-            }
-          </div>
+          {/* Status — subtle, no filled pill */}
+          <button onClick={() => setActiveTab('profile')} className="flex-shrink-0 flex items-center gap-2 group">
+            <span className={`w-1.5 h-1.5 rounded-full ${profile.isPublic ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+            <span className="text-xs font-semibold text-slate-500 group-hover:text-slate-800 transition-colors hidden sm:inline">
+              {profile.isPublic ? 'Profile live' : 'Profile hidden'}
+            </span>
+          </button>
         </div>
 
-        {/* Tab bar inside hero */}
-        <div className="relative z-10 px-6 sm:px-10 flex gap-1 pb-0">
+        {/* Tabs — underline style */}
+        <div className="flex gap-6 border-b border-slate-200">
           {([
-            { key: 'info', label: 'Business Info', icon: 'fa-building' },
-            { key: 'profile', label: 'Public Profile', icon: 'fa-globe' },
+            { key: 'info', label: 'Business Info' },
+            { key: 'profile', label: 'Public Profile' },
           ] as const).map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-5 py-3 text-xs font-black rounded-t-xl transition-all ${
-                activeTab === tab.key
-                  ? 'bg-white text-indigo-600 shadow-lg'
-                  : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+              className={`relative flex items-center gap-2 pb-3 text-sm font-semibold transition-colors ${
+                activeTab === tab.key ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
               }`}>
-              <i className={`fas ${tab.icon} text-[10px]`}></i>
               {tab.label}
               {tab.key === 'profile' && !profile.isPublic && (
-                <span className="px-1.5 py-0.5 bg-amber-400/20 text-amber-300 text-[9px] font-black rounded-full border border-amber-400/20">OFF</span>
+                <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 text-[9px] font-black rounded-full border border-amber-100">OFF</span>
               )}
               {tab.key === 'profile' && profile.isPublic && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              )}
+              {activeTab === tab.key && (
+                <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-slate-900 rounded-full"></span>
               )}
             </button>
           ))}
@@ -378,45 +358,48 @@ const BusinessPage: React.FC = () => {
         <form onSubmit={handleProfileSave} className="space-y-5 max-w-3xl">
 
           {/* Published toggle */}
-          <div className={`rounded-2xl p-5 transition-all border ${profile.isPublic ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-slate-200/70'}`}>
+          <div className="rounded-2xl p-5 border bg-white border-slate-200/70">
             <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className={`font-bold text-sm ${profile.isPublic ? 'text-white' : 'text-slate-900'}`}>
-                  {profile.isPublic ? 'Profile is Live' : 'Make Profile Public'}
-                </p>
-                <p className={`text-xs mt-0.5 ${profile.isPublic ? 'text-emerald-50/80' : 'text-slate-400'}`}>
-                  {profile.isPublic ? 'Anyone with the link can discover your business' : 'Anyone with the link can view your profile — no login needed'}
-                </p>
+              <div className="flex items-center gap-3">
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${profile.isPublic ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                <div>
+                  <p className="font-bold text-sm text-slate-900">
+                    {profile.isPublic ? 'Profile is live' : 'Make profile public'}
+                  </p>
+                  <p className="text-xs mt-0.5 text-slate-400">
+                    {profile.isPublic ? 'Anyone with the link can discover your business' : 'Anyone with the link can view your profile — no login needed'}
+                  </p>
+                </div>
               </div>
               <button type="button" onClick={() => setProfile(p => ({ ...p, isPublic: !p.isPublic }))}
-                className={`relative w-14 h-7 rounded-full flex-shrink-0 transition-colors ${profile.isPublic ? 'bg-white/30 border border-white/20' : 'bg-slate-200'}`}>
-                <span className={`absolute top-1 left-1 w-5 h-5 rounded-full shadow-md transition-transform ${profile.isPublic ? 'translate-x-7 bg-white' : 'bg-white'}`} />
+                className={`relative w-11 h-6 rounded-full flex-shrink-0 transition-colors ${profile.isPublic ? 'bg-slate-900' : 'bg-slate-200'}`}>
+                <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${profile.isPublic ? 'translate-x-5' : ''}`} />
               </button>
             </div>
             {profile.isPublic && shareUrl && (
-              <div className="mt-4 space-y-3">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white/15 border border-white/20 rounded-xl px-3 py-2.5 backdrop-blur-sm">
+              <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <i className="fas fa-link text-white/60 text-xs shrink-0" />
-                    <span className="text-xs text-white/90 flex-1 truncate font-mono">{shareUrl}</span>
+                    <i className="fas fa-link text-slate-300 text-xs shrink-0" />
+                    <span className="text-xs text-slate-600 flex-1 truncate font-mono">{shareUrl}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button type="button" onClick={copyShareUrl}
-                      className="flex-1 sm:flex-none text-xs font-black text-white bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-all border border-white/10 text-center">
+                      className="flex-1 sm:flex-none text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-lg transition-all border border-slate-200 text-center">
                       {copied ? '✓ Copied' : 'Copy Link'}
                     </button>
                     <a href={shareUrl} target="_blank" rel="noreferrer"
-                      className="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-lg transition-all border border-white/10 flex-shrink-0">
-                      <i className="fas fa-external-link-alt text-white text-[10px]"></i>
+                      className="w-8 h-8 flex items-center justify-center bg-white hover:bg-slate-100 rounded-lg transition-all border border-slate-200 flex-shrink-0">
+                      <i className="fas fa-external-link-alt text-slate-500 text-[10px]"></i>
                     </a>
                   </div>
                 </div>
                 {qrDataUrl && (
-                  <div className="bg-white/15 border border-white/20 rounded-xl px-4 py-4 backdrop-blur-sm">
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-4">
                     <div className="flex items-center gap-4">
                       <div className="relative shrink-0">
-                        <img src={qrDataUrl} alt="QR code for public profile" className="w-24 h-24 rounded-lg bg-white p-1.5" />
-                        <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-lg overflow-hidden border-2 border-white shadow-md bg-slate-200 flex items-center justify-center"
+                        <img src={qrDataUrl} alt="QR code for public profile" className="w-24 h-24 rounded-lg bg-white p-1.5 border border-slate-100" />
+                        <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-lg overflow-hidden border-2 border-white shadow-sm bg-slate-200 flex items-center justify-center"
                           style={{ background: profile.logoImage ? undefined : profile.accentColor }}>
                           {profile.logoImage
                             ? <img src={profile.logoImage} alt="logo" className="w-full h-full object-cover" />
@@ -424,20 +407,20 @@ const BusinessPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-black text-white truncate">{business?.name || 'Your Business'}</p>
-                        {profile.tagline && <p className="text-[11px] text-white/60 truncate mt-0.5">{profile.tagline}</p>}
-                        <p className="text-[10px] text-white/40 mt-1">
+                        <p className="text-xs font-bold text-slate-800 truncate">{business?.name || 'Your Business'}</p>
+                        {profile.tagline && <p className="text-[11px] text-slate-400 truncate mt-0.5">{profile.tagline}</p>}
+                        <p className="text-[10px] text-slate-400 mt-1">
                           {(visibleCatalogItems.length + profile.services.length) > 0
                             ? `${visibleCatalogItems.length + profile.services.length} item${(visibleCatalogItems.length + profile.services.length) !== 1 ? 's' : ''} showing`
                             : 'Add items in Catalog to fill out the page'}
                         </p>
                         <a href={qrDataUrl} download={`${(business?.name || 'business').replace(/\s+/g, '-').toLowerCase()}-qr-code.png`}
-                          className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-black text-white bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-all border border-white/10">
+                          className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-bold text-slate-600 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-lg transition-all border border-slate-200">
                           <i className="fas fa-download text-[10px]"></i> Download QR
                         </a>
                       </div>
                     </div>
-                    <p className="text-[10px] text-white/40 mt-3 pt-3 border-t border-white/10 leading-relaxed">
+                    <p className="text-[10px] text-slate-400 mt-3 pt-3 border-t border-slate-200 leading-relaxed">
                       <i className="fas fa-circle-info mr-1"></i>
                       This code never changes — the page it opens updates instantly the moment you save changes here, so you only ever need to print or share it once.
                     </p>
