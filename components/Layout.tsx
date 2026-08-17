@@ -80,6 +80,16 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
+  const [storefront, setStorefront] = useState<{ slug?: string; isPublic?: boolean } | null>(null);
+  useEffect(() => {
+    if (!user?.businessId) return;
+    apiRequest<{ slug?: string; profile?: { isPublic?: boolean } }>(`/businesses/${user.businessId}`)
+      .then(data => setStorefront({ slug: data.slug, isPublic: data.profile?.isPublic }))
+      .catch(() => {});
+  }, [user?.businessId]);
+  const storefrontUrl = storefront?.slug ? `${window.location.origin}/biz/${storefront.slug}` : null;
+  const storefrontLive = !!(storefront?.isPublic && storefrontUrl);
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
@@ -226,6 +236,31 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         <span className="text-sm tracking-tight">{item.label}</span>
                       </Link>
                     ))}
+
+                    {!isCollapsed && group.label === 'Sell' && (
+                      storefrontLive ? (
+                        <a
+                          href={storefrontUrl!}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-0.5 text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        >
+                          <i className="fas fa-store w-4 text-[13px] flex-shrink-0"></i>
+                          <span className="text-sm tracking-tight flex-1">Storefront</span>
+                          <i className="fas fa-arrow-up-right-from-square text-[10px] text-slate-300"></i>
+                        </a>
+                      ) : (
+                        <Link
+                          to="/business"
+                          onClick={() => setIsSidebarOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-0.5 text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                        >
+                          <i className="fas fa-store w-4 text-[13px] flex-shrink-0"></i>
+                          <span className="text-sm tracking-tight flex-1">Storefront</span>
+                          <span className="text-[9px] font-black uppercase text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-full">Set up</span>
+                        </Link>
+                      )
+                    )}
                   </div>
                 );
               })}
