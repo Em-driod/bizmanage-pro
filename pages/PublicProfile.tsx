@@ -630,7 +630,7 @@ const PublicProfile: React.FC = () => {
         <div className="flex flex-col items-center gap-4 pt-4">
           <div className="h-px w-16 bg-white/[0.07]" />
           <a
-            href="https://Morniy-d0nw.onrender.com/#/register"
+            href="https://www.morniy.online/register"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-white/8 hover:bg-white/12 border border-white/10 text-white/50 hover:text-white/80 text-[11px] font-bold px-4 py-2 rounded-xl transition-all"
