@@ -238,28 +238,32 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     ))}
 
                     {!isCollapsed && group.label === 'Sell' && (
-                      storefrontLive ? (
-                        <a
-                          href={storefrontUrl!}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-0.5 text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                        >
-                          <i className="fas fa-store w-4 text-[13px] flex-shrink-0"></i>
-                          <span className="text-sm tracking-tight flex-1">Storefront</span>
-                          <i className="fas fa-arrow-up-right-from-square text-[10px] text-slate-300"></i>
-                        </a>
-                      ) : (
-                        <Link
-                          to="/business"
-                          onClick={() => setIsSidebarOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-0.5 text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                        >
-                          <i className="fas fa-store w-4 text-[13px] flex-shrink-0"></i>
-                          <span className="text-sm tracking-tight flex-1">Storefront</span>
+                      <Link
+                        to="/storefront"
+                        onClick={() => setIsSidebarOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-0.5 ${
+                          location.pathname === '/storefront'
+                            ? 'bg-indigo-50 text-indigo-700 font-bold'
+                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                        }`}
+                      >
+                        <i className="fas fa-store w-4 text-[13px] flex-shrink-0"></i>
+                        <span className="text-sm tracking-tight flex-1">Storefront</span>
+                        {storefrontLive ? (
+                          <a
+                            href={storefrontUrl!}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            title="View live page"
+                            className="text-slate-300 hover:text-indigo-600 transition-colors"
+                          >
+                            <i className="fas fa-arrow-up-right-from-square text-[10px]"></i>
+                          </a>
+                        ) : (
                           <span className="text-[9px] font-black uppercase text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-full">Set up</span>
-                        </Link>
-                      )
+                        )}
+                      </Link>
                     )}
                   </div>
                 );

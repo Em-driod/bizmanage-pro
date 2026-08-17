@@ -25,6 +25,7 @@ const Receipts = lazy(() => import('./pages/Receipts'));
 const Payrolls = lazy(() => import('./pages/Payrolls'));
 const Users = lazy(() => import('./pages/Users'));
 const BusinessPage = lazy(() => import('./pages/Businesses'));
+const Storefront = lazy(() => import('./pages/Storefront'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Reports = lazy(() => import('./pages/Reports'));
@@ -85,6 +86,7 @@ const AppRoutes = () => {
         <Route path="/reports" element={<Layout><Reports /></Layout>} />
         <Route path="/invoices" element={<Layout><Invoices /></Layout>} />
         <Route path="/business" element={<Layout><BusinessPage /></Layout>} />
+        <Route path="/storefront" element={<Layout><Storefront /></Layout>} />
         <Route path="/automation" element={<Layout><Automation /></Layout>} />
         <Route path="/projects" element={<Layout><Projects /></Layout>} />
         <Route path="/tax" element={<Layout><Tax /></Layout>} />
