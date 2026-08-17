@@ -24,18 +24,25 @@ const NAV_GROUPS = [
     items: [
       { label: 'Dashboard', path: '/dashboard', icon: 'fa-layer-group' },
       { label: 'Clients', path: '/clients', icon: 'fa-address-book' },
+      { label: 'Transactions', path: '/transactions', icon: 'fa-receipt' },
       { label: 'Invoices', path: '/invoices', icon: 'fa-file-invoice' },
       { label: 'Receipts', path: '/receipts', icon: 'fa-money-check-dollar' },
-      { label: 'Transactions', path: '/transactions', icon: 'fa-receipt' },
+    ],
+  },
+  {
+    label: 'Sell',
+    items: [
+      { label: 'Catalog', path: '/products', icon: 'fa-box-open' },
       { label: 'Proposals', path: '/proposals', icon: 'fa-file-signature' },
     ],
   },
   {
     label: 'Finance',
     items: [
+      { label: 'Reports', path: '/reports', icon: 'fa-chart-pie' },
       { label: 'Budgets', path: '/budgets', icon: 'fa-wallet' },
       { label: 'Payroll', path: '/payroll', icon: 'fa-user-tie' },
-      { label: 'Reports', path: '/reports', icon: 'fa-chart-pie' },
+      { label: 'Tax', path: '/tax', icon: 'fa-landmark' },
     ],
   },
   {
@@ -43,9 +50,7 @@ const NAV_GROUPS = [
     collapsed: true,
     items: [
       { label: 'Projects', path: '/projects', icon: 'fa-diagram-project' },
-      { label: 'Catalog', path: '/products', icon: 'fa-box-open' },
       { label: 'Assets', path: '/capital-assets', icon: 'fa-box-archive' },
-      { label: 'Tax', path: '/tax', icon: 'fa-landmark' },
       { label: 'Automation', path: '/automation', icon: 'fa-robot' },
       { label: 'Scanned Docs', path: '/scanned-transactions', icon: 'fa-scanner' },
     ],
@@ -56,7 +61,7 @@ const BOTTOM_NAV = [
   { label: 'Home', path: '/dashboard', icon: 'fa-layer-group' },
   { label: 'Clients', path: '/clients', icon: 'fa-address-book' },
   { label: 'Invoices', path: '/invoices', icon: 'fa-file-invoice' },
-  { label: 'Reports', path: '/reports', icon: 'fa-chart-pie' },
+  { label: 'Receipts', path: '/receipts', icon: 'fa-money-check-dollar' },
 ];
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -405,7 +410,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             {[
               { label: 'New Invoice', icon: 'fa-file-invoice', path: '/invoices', color: 'bg-indigo-600' },
               { label: 'Add Transaction', icon: 'fa-receipt', path: '/transactions', color: 'bg-emerald-600' },
-              { label: 'Add Client', icon: 'fa-address-book', path: '/clients', color: 'bg-violet-600' },
+              { label: 'New Receipt', icon: 'fa-money-check-dollar', path: '/receipts', color: 'bg-violet-600' },
             ].map(action => (
               <button
                 key={action.label}
