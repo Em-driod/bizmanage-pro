@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { motion, useScroll, useSpring } from 'framer-motion';
+import { motion, useScroll, useSpring, useMotionValue, useInView } from 'framer-motion';
 import { API_BASE_URL } from '../constants';
 
 interface ServiceItem { name: string; description?: string; price?: number; image?: string; inStock?: number; }
@@ -45,6 +45,120 @@ const ScrollProgress: React.FC<{ accent: string }> = ({ accent }) => {
     />
   );
 };
+
+/* ─── Magnetic custom cursor — a coherent dot+ring that reacts to clicks.
+       This alone is enough to make a straight CSS/HTML clone feel wrong. ──── */
+const MagneticCursor: React.FC<{ accent: string }> = ({ accent }) => {
+  const mx = useMotionValue(-100);
+  const my = useMotionValue(-100);
+  const sx = useSpring(mx, { stiffness: 160, damping: 22 });
+  const sy = useSpring(my, { stiffness: 160, damping: 22 });
+  const [clicked, setClicked] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => { mx.set(e.clientX); my.set(e.clientY); setVisible(true); };
+    const down = () => setClicked(true);
+    const up = () => setClicked(false);
+    const leave = () => setVisible(false);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mousedown', down);
+    window.addEventListener('mouseup', up);
+    document.documentElement.addEventListener('mouseleave', leave);
+    return () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mousedown', down);
+      window.removeEventListener('mouseup', up);
+      document.documentElement.removeEventListener('mouseleave', leave);
+    };
+  }, [mx, my]);
+
+  return (
+    <div className="hidden md:block" style={{ opacity: visible ? 1 : 0, transition: 'opacity 200ms' }}>
+      <motion.div
+        style={{ left: sx, top: sy, translateX: '-50%', translateY: '-50%', background: accent }}
+        animate={{ scale: clicked ? 0.3 : 1 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        className="fixed z-[9999] pointer-events-none w-2 h-2 rounded-full"
+      />
+      <motion.div
+        style={{ left: sx, top: sy, translateX: '-50%', translateY: '-50%', borderColor: `${accent}55` }}
+        animate={{ scale: clicked ? 2.4 : 1 }}
+        transition={{ type: 'spring', stiffness: 80, damping: 16 }}
+        className="fixed z-[9998] pointer-events-none w-7 h-7 rounded-full border"
+      />
+    </div>
+  );
+};
+
+/* ─── 3D mouse-tilt wrapper — genuinely awkward to clone without the JS ──── */
+const TiltCard: React.FC<{ children: React.ReactNode; className?: string; style?: React.CSSProperties; [key: string]: any }> = ({ children, className = '', style, ...rest }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const rx = useMotionValue(0);
+  const ry = useMotionValue(0);
+  const srx = useSpring(rx, { stiffness: 220, damping: 26 });
+  const sry = useSpring(ry, { stiffness: 220, damping: 26 });
+
+  const handleMove = useCallback((e: React.MouseEvent) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const cx = (e.clientX - rect.left) / rect.width - 0.5;
+    const cy = (e.clientY - rect.top) / rect.height - 0.5;
+    ry.set(cx * 10);
+    rx.set(-cy * 10);
+  }, [rx, ry]);
+
+  const handleLeave = useCallback(() => { rx.set(0); ry.set(0); }, [rx, ry]);
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      style={{ rotateX: srx, rotateY: sry, transformStyle: 'preserve-3d', perspective: 700, ...style }}
+      className={className}
+      {...rest}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+/* ─── Character-by-character reveal ───────────────────────────────────────── */
+const SplitText: React.FC<{ text: string; className?: string }> = ({ text, className = '' }) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  return (
+    <span ref={ref} className={`inline-block overflow-hidden ${className}`} aria-label={text}>
+      {text.split('').map((char, i) => (
+        <motion.span
+          key={i}
+          initial={{ y: '110%', opacity: 0 }}
+          animate={inView ? { y: '0%', opacity: 1 } : {}}
+          transition={{ duration: 0.6, delay: i * 0.03, ease: [0.16, 1, 0.3, 1] }}
+          className="inline-block"
+          style={{ display: char === ' ' ? 'inline' : 'inline-block' }}
+        >
+          {char === ' ' ? ' ' : char}
+        </motion.span>
+      ))}
+    </span>
+  );
+};
+
+/* ─── Angular divider — a torn/cut edge instead of a generic gradient fade ── */
+const AngularDivider: React.FC<{ accent: string }> = ({ accent }) => (
+  <div className="relative h-16 sm:h-24 -mt-px" style={{ background: '#080808' }}>
+    <svg
+      viewBox="0 0 1200 80"
+      preserveAspectRatio="none"
+      className="absolute -top-px left-0 w-full h-16 sm:h-24"
+    >
+      <polygon points="0,0 1200,0 1200,20 0,70" fill="#080808" />
+      <polygon points="0,0 1200,0 1200,14 0,58" fill={accent} opacity="0.08" />
+    </svg>
+  </div>
+);
 
 /* ─── Geometric SVG pattern for no-cover hero ─────────────────────────────── */
 const GeometricPattern: React.FC<{ accent: string }> = ({ accent }) => (
@@ -164,6 +278,7 @@ const PublicProfile: React.FC = () => {
     <div className="min-h-screen bg-[#080808] text-white selection:bg-white/20 overflow-x-hidden">
 
       <ScrollProgress accent={accent} />
+      <MagneticCursor accent={accent} />
 
       {/* Ambient dot grid — extends the premium texture beyond just the hero */}
       <div
@@ -313,7 +428,7 @@ const PublicProfile: React.FC = () => {
           <motion.div variants={fadeUp} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}>
             {profile.coverImage ? (
               <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[0.94] mb-5 text-white drop-shadow-2xl">
-                {data.name}
+                <SplitText text={data.name} />
               </h1>
             ) : (
               /* Shimmer gradient text when no cover */
@@ -374,10 +489,12 @@ const PublicProfile: React.FC = () => {
         </div>
       </div>
 
+      <AngularDivider accent={accent} />
+
       {/* ══════════════════════════════════════════════════════════════════════
           MAIN CONTENT
       ══════════════════════════════════════════════════════════════════════ */}
-      <div className="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 pb-48 space-y-8 sm:space-y-10 pt-10">
+      <div className="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 pb-48 space-y-8 sm:space-y-10 -mt-6 sm:-mt-10">
 
         {/* ── Primary CTA ── */}
         {(waLink || profile.email) && (
@@ -492,11 +609,11 @@ const PublicProfile: React.FC = () => {
                 className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               >
                 {profile.services.map((svc, i) => (
-                  <motion.div
+                  <TiltCard
                     key={i}
                     variants={fadeUp}
                     transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                    whileHover={{ scale: 1.02, borderColor: 'rgba(255,255,255,0.2)' }}
+                    whileHover={{ scale: 1.03, borderColor: 'rgba(255,255,255,0.2)' }}
                     className="group relative rounded-2xl border border-white/[0.08] overflow-hidden"
                     style={{ background: 'rgba(255,255,255,0.04)' }}
                   >
@@ -546,7 +663,7 @@ const PublicProfile: React.FC = () => {
                         )}
                       </div>
                     </div>
-                  </motion.div>
+                  </TiltCard>
                 ))}
               </motion.div>
             ) : (
