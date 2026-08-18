@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { motion, useScroll, useSpring } from 'framer-motion';
 import { API_BASE_URL } from '../constants';
 
 interface ServiceItem { name: string; description?: string; price?: number; image?: string; inStock?: number; }
@@ -22,6 +23,28 @@ interface ProfileData {
     accentColor?: string;
   };
 }
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 28 },
+  show: { opacity: 1, y: 0 },
+};
+
+const staggerContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+};
+
+/* ─── Scroll progress bar ──────────────────────────────────────────────────── */
+const ScrollProgress: React.FC<{ accent: string }> = ({ accent }) => {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 200, damping: 40 });
+  return (
+    <motion.div
+      style={{ scaleX, transformOrigin: '0%', background: accent }}
+      className="fixed top-0 inset-x-0 h-[2px] z-[60] pointer-events-none"
+    />
+  );
+};
 
 /* ─── Geometric SVG pattern for no-cover hero ─────────────────────────────── */
 const GeometricPattern: React.FC<{ accent: string }> = ({ accent }) => (
@@ -76,6 +99,7 @@ const PublicProfile: React.FC = () => {
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [nearBottom, setNearBottom] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -87,10 +111,15 @@ const PublicProfile: React.FC = () => {
   }, [slug]);
 
   useEffect(() => {
-    const onScroll = () => setScrollY(window.scrollY);
+    const onScroll = () => {
+      setScrollY(window.scrollY);
+      const distanceFromBottom = document.documentElement.scrollHeight - window.innerHeight - window.scrollY;
+      setNearBottom(distanceFromBottom < 220);
+    };
+    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [data]);
 
   const fmt = (n: number) => {
     if (!data) return String(n);
@@ -127,13 +156,24 @@ const PublicProfile: React.FC = () => {
   const heroScrolled = scrollY > (heroRef.current?.offsetHeight ?? window.innerHeight) - 80;
   const hasServices = profile.services && profile.services.length > 0;
   const hasImages = hasServices && profile.services.some(s => s.image);
-  const hasLinks = profile.website || profile.instagram;
 
   /* Parallax offset for cover image */
   const parallaxY = scrollY * 0.32;
 
   return (
     <div className="min-h-screen bg-[#080808] text-white selection:bg-white/20 overflow-x-hidden">
+
+      <ScrollProgress accent={accent} />
+
+      {/* Ambient dot grid — extends the premium texture beyond just the hero */}
+      <div
+        className="fixed inset-0 pointer-events-none opacity-[0.4] z-0"
+        style={{
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+          maskImage: 'radial-gradient(ellipse 70% 60% at 50% 0%, black 0%, transparent 100%)',
+        }}
+      />
 
       {/* ══════════════════════════════════════════════════════════════════════
           FLOATING STICKY PILL HEADER
@@ -209,17 +249,23 @@ const PublicProfile: React.FC = () => {
             {/* Geometric SVG tiling */}
             <GeometricPattern accent={accent} />
             {/* Glowing orbs */}
-            <div
-              className="absolute top-[-15%] left-[-5%] w-[700px] h-[700px] rounded-full blur-[160px] animate-pulse"
+            <motion.div
+              animate={{ x: [0, 40, -20, 0], y: [0, -30, 20, 0] }}
+              transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute top-[-15%] left-[-5%] w-[700px] h-[700px] rounded-full blur-[160px]"
               style={{ background: accent, opacity: 0.18 }}
             />
-            <div
+            <motion.div
+              animate={{ x: [0, -30, 40, 0], y: [0, 25, -15, 0] }}
+              transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
               className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full blur-[140px]"
-              style={{ background: accent, opacity: 0.10, animationDelay: '2s' }}
+              style={{ background: accent, opacity: 0.10 }}
             />
-            <div
-              className="absolute top-[40%] left-[60%] w-[280px] h-[280px] rounded-full blur-[100px] animate-pulse"
-              style={{ background: accent, opacity: 0.08, animationDelay: '1s' }}
+            <motion.div
+              animate={{ opacity: [0.05, 0.12, 0.05] }}
+              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute top-[40%] left-[60%] w-[280px] h-[280px] rounded-full blur-[100px]"
+              style={{ background: accent }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/40 to-transparent" />
           </div>
@@ -235,9 +281,14 @@ const PublicProfile: React.FC = () => {
         />
 
         {/* ── Hero content ── */}
-        <div className="relative max-w-5xl mx-auto w-full px-6 sm:px-10 pb-16 pt-28">
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={staggerContainer}
+          className="relative max-w-5xl mx-auto w-full px-6 sm:px-10 pb-16 pt-28"
+        >
           {/* Logo */}
-          <div className="mb-8">
+          <motion.div variants={fadeUp} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="mb-8">
             {profile.logoImage ? (
               <img
                 src={profile.logoImage}
@@ -256,42 +307,46 @@ const PublicProfile: React.FC = () => {
                 {data.name.charAt(0)}
               </div>
             )}
-          </div>
+          </motion.div>
 
           {/* Business name */}
-          {profile.coverImage ? (
-            <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[0.94] mb-5 text-white drop-shadow-2xl">
-              {data.name}
-            </h1>
-          ) : (
-            /* Shimmer gradient text when no cover */
-            <h1
-              className="text-5xl sm:text-7xl font-black tracking-tight leading-[0.94] mb-5"
-              style={{
-                backgroundImage: `linear-gradient(120deg, #ffffff 0%, ${accent} 40%, #ffffff 70%, ${accent} 100%)`,
-                backgroundSize: '250% auto',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                animation: 'shimmer 5s linear infinite',
-              }}
-            >
-              {data.name}
-            </h1>
-          )}
+          <motion.div variants={fadeUp} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}>
+            {profile.coverImage ? (
+              <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[0.94] mb-5 text-white drop-shadow-2xl">
+                {data.name}
+              </h1>
+            ) : (
+              /* Shimmer gradient text when no cover */
+              <h1
+                className="text-5xl sm:text-7xl font-black tracking-tight leading-[0.94] mb-5"
+                style={{
+                  backgroundImage: `linear-gradient(120deg, #ffffff 0%, ${accent} 40%, #ffffff 70%, ${accent} 100%)`,
+                  backgroundSize: '250% auto',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  animation: 'shimmer 5s linear infinite',
+                }}
+              >
+                {data.name}
+              </h1>
+            )}
+          </motion.div>
 
           {/* Tagline */}
           {profile.tagline && (
-            <p
+            <motion.p
+              variants={fadeUp}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               className="text-xl sm:text-2xl font-semibold mb-6 max-w-xl leading-snug"
               style={{ color: `${accent}ee` }}
             >
               {profile.tagline}
-            </p>
+            </motion.p>
           )}
 
           {/* Meta pills */}
-          <div className="flex flex-wrap items-center gap-3 text-sm text-white/45">
+          <motion.div variants={fadeUp} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="flex flex-wrap items-center gap-3 text-sm text-white/45">
             {profile.location && (
               <span className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] backdrop-blur-sm">
                 <i className="fas fa-map-marker-alt text-[10px]" style={{ color: accent }} />
@@ -304,8 +359,8 @@ const PublicProfile: React.FC = () => {
                 {profile.services.length} offering{profile.services.length > 1 ? 's' : ''}
               </span>
             )}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Scroll hint */}
         <div className="absolute bottom-6 inset-x-0 flex justify-center">
@@ -322,45 +377,61 @@ const PublicProfile: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════════════════
           MAIN CONTENT
       ══════════════════════════════════════════════════════════════════════ */}
-      <div className="max-w-4xl mx-auto px-5 sm:px-8 pb-36 space-y-8 sm:space-y-10 pt-10">
+      <div className="relative z-10 max-w-4xl mx-auto px-5 sm:px-8 pb-48 space-y-8 sm:space-y-10 pt-10">
 
         {/* ── Primary CTA ── */}
         {(waLink || profile.email) && (
-          <div className="space-y-3">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-3"
+          >
             {waLink && (
-              <a
+              <motion.a
                 href={waLink}
                 target="_blank"
                 rel="noreferrer"
-                className="group flex items-center justify-center gap-3 w-full py-5 rounded-2xl text-white font-black text-base transition-all duration-300 active:scale-[0.98]"
+                whileHover={{ scale: 1.015 }}
+                whileTap={{ scale: 0.98 }}
+                className="group relative overflow-hidden flex items-center justify-center gap-3 w-full py-5 rounded-2xl text-white font-black text-base"
                 style={{
                   background: 'linear-gradient(135deg,#25d366,#128c7e)',
-                  boxShadow: '0 12px 40px rgba(37,211,102,0.22)',
+                  boxShadow: '0 12px 40px rgba(37,211,102,0.25)',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 20px 56px rgba(37,211,102,0.36)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 40px rgba(37,211,102,0.22)'; }}
               >
                 <i className="fab fa-whatsapp text-2xl" />
                 Chat on WhatsApp
                 <i className="fas fa-arrow-right text-xs opacity-60 group-hover:translate-x-1 transition-transform" />
-              </a>
+                <motion.span
+                  className="absolute inset-0 bg-white/10"
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: '100%' }}
+                  transition={{ duration: 0.6, ease: 'easeInOut' }}
+                  style={{ skewX: -12 }}
+                />
+              </motion.a>
             )}
             {profile.email && (
               <a
                 href={`mailto:${profile.email}`}
                 className="group flex items-center justify-center gap-3 w-full py-4 rounded-2xl font-bold text-sm border border-white/[0.09] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.18] transition-all duration-300 text-white/65 hover:text-white/90"
-                style={{ transition: 'all 300ms ease' }}
               >
                 <i className="fas fa-envelope text-xs" style={{ color: accent }} />
                 {profile.email}
               </a>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* ── About ── */}
         {profile.description && (
-          <div
+          <motion.div
+            initial={{ opacity: 0, y: 28 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
             className="relative overflow-hidden rounded-3xl border border-white/[0.08] p-7 sm:p-10"
             style={{ background: 'rgba(255,255,255,0.03)' }}
           >
@@ -385,14 +456,20 @@ const PublicProfile: React.FC = () => {
             <p className="text-white/65 leading-[1.85] text-base sm:text-lg pl-3">
               {profile.description}
             </p>
-          </div>
+          </motion.div>
         )}
 
         {/* ── Services / Products ── */}
         {hasServices && (
           <div>
             {/* Section label */}
-            <div className="flex items-center gap-3 mb-5">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{ duration: 0.5 }}
+              className="flex items-center gap-3 mb-5"
+            >
               <p
                 className="text-[10px] font-black tracking-[3px] uppercase"
                 style={{ color: accent }}
@@ -403,31 +480,25 @@ const PublicProfile: React.FC = () => {
               <span className="text-[10px] font-black tracking-[2px] uppercase text-white/15">
                 {profile.services.length} item{profile.services.length > 1 ? 's' : ''}
               </span>
-            </div>
+            </motion.div>
 
             {/* ── Image cards (masonry-ish 2-col) ── */}
             {hasImages ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <motion.div
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, margin: '-60px' }}
+                variants={staggerContainer}
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+              >
                 {profile.services.map((svc, i) => (
-                  <div
+                  <motion.div
                     key={i}
+                    variants={fadeUp}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    whileHover={{ scale: 1.02, borderColor: 'rgba(255,255,255,0.2)' }}
                     className="group relative rounded-2xl border border-white/[0.08] overflow-hidden"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      transition: 'transform 300ms ease, border-color 300ms ease, box-shadow 300ms ease',
-                    }}
-                    onMouseEnter={e => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.transform = 'scale(1.02)';
-                      el.style.borderColor = 'rgba(255,255,255,0.2)';
-                      el.style.boxShadow = `0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px ${accent}44`;
-                    }}
-                    onMouseLeave={e => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.transform = 'scale(1)';
-                      el.style.borderColor = 'rgba(255,255,255,0.08)';
-                      el.style.boxShadow = 'none';
-                    }}
+                    style={{ background: 'rgba(255,255,255,0.04)' }}
                   >
                     {/* Image */}
                     {svc.image && (
@@ -475,22 +546,26 @@ const PublicProfile: React.FC = () => {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             ) : (
               /* ── Numbered list (no images) ── */
-              <div
+              <motion.div
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, margin: '-60px' }}
+                variants={staggerContainer}
                 className="rounded-2xl border border-white/[0.08] overflow-hidden divide-y divide-white/[0.05]"
                 style={{ background: 'rgba(255,255,255,0.03)' }}
               >
                 {profile.services.map((svc, i) => (
-                  <div
+                  <motion.div
                     key={i}
+                    variants={fadeUp}
+                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                    whileHover={{ background: 'rgba(255,255,255,0.04)' }}
                     className="group relative flex items-center gap-5 px-6 py-5"
-                    style={{ transition: 'background 300ms ease' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                   >
                     {/* Big numbered accent */}
                     <span
@@ -519,16 +594,20 @@ const PublicProfile: React.FC = () => {
                         </span>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             )}
           </div>
         )}
 
         {/* ── Contact card ── */}
         {(waLink || profile.email || profile.website || profile.instagram) && (
-          <div
+          <motion.div
+            initial={{ opacity: 0, y: 28 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
             className="relative rounded-3xl overflow-hidden p-[1px]"
             style={{
               background: `linear-gradient(135deg, ${accent}55, rgba(255,255,255,0.06), ${accent}22)`,
@@ -623,7 +702,7 @@ const PublicProfile: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ── Footer ── */}
@@ -644,11 +723,20 @@ const PublicProfile: React.FC = () => {
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          FLOATING SHARE PILL — fixed bottom-center
+          FLOATING SHARE PILL — fixed bottom-center, fades near the footer so
+          it never sits on top of it regardless of viewport height
       ══════════════════════════════════════════════════════════════════════ */}
-      <div className="fixed bottom-6 inset-x-0 z-50 flex justify-center pointer-events-none">
+      <div
+        className="fixed bottom-6 inset-x-0 z-40 flex justify-center pointer-events-none"
+        style={{
+          opacity: nearBottom ? 0 : 1,
+          transform: nearBottom ? 'translateY(12px) scale(0.96)' : 'translateY(0) scale(1)',
+          transition: 'opacity 300ms ease, transform 300ms ease',
+        }}
+      >
         <button
           onClick={copyLink}
+          disabled={nearBottom}
           className="pointer-events-auto flex items-center gap-2.5 px-6 py-3.5 rounded-full font-black text-sm shadow-2xl border transition-all duration-300 active:scale-95"
           style={{
             background: copied ? 'rgba(16,185,129,0.15)' : 'rgba(15,15,15,0.92)',
