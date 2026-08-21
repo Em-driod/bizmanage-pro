@@ -34,6 +34,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
     const [dueDate, setDueDate] = useState('');
     const [taxRate, setTaxRate] = useState(0); // in percentage
     const [notes, setNotes] = useState('');
+    const [depositAmount, setDepositAmount] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
@@ -121,6 +122,21 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
         return subtotal + taxAmount;
     };
 
+    const buildPayload = () => {
+        const deposit = parseFloat(depositAmount) || 0;
+        return {
+            clientId: useCustomClient ? null : selectedClientId,
+            customClientName: useCustomClient ? customClientName : null,
+            lineItems,
+            dueDate,
+            tax: taxRate,
+            subtotal: calculateSubtotal(),
+            total: calculateTotal(),
+            notes,
+            depositAmount: deposit > 0 ? deposit : undefined,
+        };
+    };
+
     const handleSaveAndPrint = async () => {
         setError(null);
 
@@ -136,17 +152,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
         setIsLoading(true);
 
         try {
-            const payload = {
-                clientId: useCustomClient ? null : selectedClientId,
-                customClientName: useCustomClient ? customClientName : null,
-                lineItems,
-                dueDate,
-                tax: taxRate,
-                subtotal: calculateSubtotal(),
-                total: calculateTotal(),
-                notes,
-                recordAsIncome: true,
-            };
+            const payload = buildPayload();
             const response = await apiRequest<any>('/invoices', { method: 'POST', body: payload });
 
             // Trigger print
@@ -425,6 +431,31 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                     </div>
 
                     <div>
+                        <label className="block text-sm font-medium mb-1 text-slate-700">Amount Paid Now (Optional)</label>
+                        <input
+                            type="number"
+                            placeholder="0.00"
+                            value={depositAmount}
+                            onChange={(e) => setDepositAmount(e.target.value)}
+                            className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                            step="0.01"
+                            min="0"
+                            max={calculateTotal() || undefined}
+                        />
+                        {(() => {
+                            const deposit = parseFloat(depositAmount) || 0;
+                            const total = calculateTotal();
+                            if (deposit <= 0) {
+                                return <p className="text-xs text-slate-400 mt-1">Leave blank if nothing has been paid yet — invoice saves as unpaid.</p>;
+                            }
+                            if (deposit >= total && total > 0) {
+                                return <p className="text-xs font-medium text-emerald-600 mt-1">Covers the full total — invoice will be marked fully paid, recorded as income now.</p>;
+                            }
+                            return <p className="text-xs font-medium text-amber-600 mt-1">Leaves {formatCurrency(Math.max(0, total - deposit))} still owing — invoice will be marked "partial".</p>;
+                        })()}
+                    </div>
+
+                    <div>
                         <label className="block text-sm font-medium mb-1 text-slate-700">Notes (Optional)</label>
                         <textarea
                             value={notes}
@@ -450,16 +481,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                 // Basic form of handleSubmit but without print
                                 setIsLoading(true);
                                 try {
-                                    const payload = {
-                                        clientId: useCustomClient ? null : selectedClientId,
-                                        customClientName: useCustomClient ? customClientName : null,
-                                        lineItems,
-                                        dueDate,
-                                        tax: taxRate,
-                                        subtotal: calculateSubtotal(),
-                                        total: calculateTotal(),
-                                        notes,
-                                    };
+                                    const payload = buildPayload();
                                     await apiRequest('/invoices', { method: 'POST', body: payload });
                                     onSave();
                                     onClose();
@@ -480,7 +502,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                             className="flex-[2] py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all hover:-translate-y-0.5 active:scale-95 disabled:bg-indigo-300 font-black uppercase tracking-wider text-xs order-1 sm:order-3"
                             disabled={isLoading}
                         >
-                            {isLoading ? 'Processing...' : 'Print & Record Income'}
+                            {isLoading ? 'Processing...' : 'Save & Print'}
                         </button>
                     </div>
                 </form>

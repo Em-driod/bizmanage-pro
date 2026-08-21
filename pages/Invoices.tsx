@@ -38,6 +38,7 @@ interface InvoicePayment {
     amount: number;
     date: string;
     method: string;
+    transactionId?: string;
     note?: string;
 }
 
@@ -89,6 +90,7 @@ const Invoices: React.FC = () => {
     const [payMethod, setPayMethod] = useState('bank transfer');
     const [payNote, setPayNote] = useState('');
     const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+    const [isUndoingPayment, setIsUndoingPayment] = useState(false);
 
     // Tab state
     const [activeTab, setActiveTab] = useState<'invoices' | 'recurring'>('invoices');
@@ -161,17 +163,22 @@ const Invoices: React.FC = () => {
         }
     };
 
+    // Only status changes that don't touch money/transactions are instant.
+    // Anything that can mark an invoice paid/partial must go through the
+    // confirm-first Record Payment modal (openPaymentModal) instead.
     const getNextActions = (status: Invoice['status']): { label: string; next: Invoice['status'] }[] => {
         switch (status) {
             case 'draft':    return [{ label: 'Mark Sent', next: 'sent' }];
-            case 'sent':     return [{ label: 'Mark Paid', next: 'paid' }, { label: 'Mark Overdue', next: 'overdue' }];
-            case 'partial':  return [{ label: 'Mark Rest Paid', next: 'paid' }];
-            case 'overdue':  return [{ label: 'Mark Paid', next: 'paid' }];
+            case 'sent':     return [{ label: 'Mark Overdue', next: 'overdue' }];
+            case 'partial':  return [];
+            case 'overdue':  return [];
             case 'paid':     return [];
         }
     };
 
     const balanceOf = (invoice: Invoice) => invoice.balance ?? (invoice.status === 'paid' ? 0 : invoice.total);
+    const amountPaidOf = (invoice: Invoice) => invoice.amountPaid ?? (invoice.status === 'paid' ? invoice.total : 0);
+    const paidPct = (invoice: Invoice) => invoice.total > 0 ? Math.min(100, Math.max(0, (amountPaidOf(invoice) / invoice.total) * 100)) : 0;
 
     const openPaymentModal = (invoice: Invoice) => {
         setPayingInvoice(invoice);
@@ -197,6 +204,22 @@ const Invoices: React.FC = () => {
             alert('Failed to record payment: ' + getErrorMessage(err));
         } finally {
             setIsRecordingPayment(false);
+        }
+    };
+
+    const handleUndoLastPayment = async () => {
+        if (!payingInvoice) return;
+        if (!confirm('Remove the most recent payment? Its linked transaction will be deleted and this cannot be undone.')) return;
+        setIsUndoingPayment(true);
+        try {
+            const updated = await apiRequest<Invoice>(`/invoices/${payingInvoice._id}/payments/last`, { method: 'DELETE' });
+            setPayingInvoice(updated);
+            setPayAmount(String(balanceOf(updated)));
+            fetchInvoices(invPage);
+        } catch (err) {
+            alert('Failed to undo payment: ' + getErrorMessage(err));
+        } finally {
+            setIsUndoingPayment(false);
         }
     };
 
@@ -525,7 +548,12 @@ const Invoices: React.FC = () => {
                                                 <td className="px-8 py-6">
                                                     <p className="font-black text-slate-900">{formatCurrency(invoice.total)}</p>
                                                     {invoice.status === 'partial' && (
-                                                        <p className="text-[10px] font-bold text-amber-600 mt-0.5">{formatCurrency(balanceOf(invoice))} left</p>
+                                                        <>
+                                                            <p className="text-[10px] font-bold text-amber-600 mt-0.5">{formatCurrency(balanceOf(invoice))} left</p>
+                                                            <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1.5">
+                                                                <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${paidPct(invoice)}%` }} />
+                                                            </div>
+                                                        </>
                                                     )}
                                                 </td>
                                                 <td className="px-8 py-6 text-sm text-slate-500 font-medium">
@@ -612,6 +640,12 @@ const Invoices: React.FC = () => {
                                                 )}
                                             </div>
                                         </div>
+
+                                        {invoice.status === 'partial' && (
+                                            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${paidPct(invoice)}%` }} />
+                                            </div>
+                                        )}
 
                                         <div className="flex gap-2">
                                             {(invoice.status === 'sent' || invoice.status === 'overdue' || invoice.status === 'partial') && (
@@ -1148,21 +1182,44 @@ const Invoices: React.FC = () => {
                                     <span className="text-xs font-bold text-slate-500">Balance Due</span>
                                     <span className="text-sm font-black text-slate-900">{formatCurrency(balanceOf(payingInvoice))}</span>
                                 </div>
+                                {payingInvoice.payments && payingInvoice.payments.length > 0 && (
+                                    <div className="pt-1.5">
+                                        <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${paidPct(payingInvoice)}%` }} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {payingInvoice.payments && payingInvoice.payments.length > 0 && (
                                 <div className="mt-4">
                                     <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">Payment History</p>
                                     <div className="space-y-1.5">
-                                        {payingInvoice.payments.map((p, i) => (
-                                            <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-lg px-3 py-2">
-                                                <div className="min-w-0">
-                                                    <p className="text-xs font-bold text-slate-700 capitalize truncate">{p.method}{p.note ? ` · ${p.note}` : ''}</p>
-                                                    <p className="text-[10px] text-slate-400">{new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                        {payingInvoice.payments.map((p, i) => {
+                                            const isLast = i === payingInvoice.payments!.length - 1;
+                                            return (
+                                                <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-lg px-3 py-2">
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-bold text-slate-700 capitalize truncate">{p.method}{p.note ? ` · ${p.note}` : ''}</p>
+                                                        <p className="text-[10px] text-slate-400">{new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                                                        <span className="text-xs font-black text-emerald-600">{formatCurrency(p.amount)}</span>
+                                                        {isLast && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleUndoLastPayment}
+                                                                disabled={isUndoingPayment}
+                                                                title="Undo this payment"
+                                                                className="w-6 h-6 flex items-center justify-center rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50 transition-colors"
+                                                            >
+                                                                <i className="fas fa-rotate-left text-[10px]"></i>
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <span className="text-xs font-black text-emerald-600 shrink-0 ml-2">{formatCurrency(p.amount)}</span>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
