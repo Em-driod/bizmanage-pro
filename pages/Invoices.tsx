@@ -388,6 +388,9 @@ const Invoices: React.FC = () => {
                 total: fullInvoice.total,
                 dueDate: fullInvoice.dueDate,
                 notes: (fullInvoice as any).notes,
+                status: fullInvoice.status,
+                amountPaid: fullInvoice.amountPaid,
+                balance: fullInvoice.balance,
             });
         } catch (err) {
             alert('Failed to load invoice: ' + getErrorMessage(err));
@@ -1131,11 +1134,40 @@ const Invoices: React.FC = () => {
                                 <i className="fas fa-times text-sm"></i>
                             </button>
                         </div>
-                        <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
-                            <div className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-                                <span className="text-xs font-bold text-slate-500">Balance Due</span>
-                                <span className="text-sm font-black text-slate-900">{formatCurrency(balanceOf(payingInvoice))}</span>
+                        <div className="px-6 pt-6 max-h-[70vh] overflow-y-auto">
+                            <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100 space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-semibold text-slate-400">Invoice Total</span>
+                                    <span className="text-xs font-bold text-slate-600">{formatCurrency(payingInvoice.total)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-semibold text-slate-400">Paid So Far</span>
+                                    <span className="text-xs font-bold text-emerald-600">{formatCurrency(payingInvoice.amountPaid ?? 0)}</span>
+                                </div>
+                                <div className="flex items-center justify-between pt-1.5 border-t border-slate-200">
+                                    <span className="text-xs font-bold text-slate-500">Balance Due</span>
+                                    <span className="text-sm font-black text-slate-900">{formatCurrency(balanceOf(payingInvoice))}</span>
+                                </div>
                             </div>
+
+                            {payingInvoice.payments && payingInvoice.payments.length > 0 && (
+                                <div className="mt-4">
+                                    <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">Payment History</p>
+                                    <div className="space-y-1.5">
+                                        {payingInvoice.payments.map((p, i) => (
+                                            <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-lg px-3 py-2">
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-bold text-slate-700 capitalize truncate">{p.method}{p.note ? ` · ${p.note}` : ''}</p>
+                                                    <p className="text-[10px] text-slate-400">{new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                                </div>
+                                                <span className="text-xs font-black text-emerald-600 shrink-0 ml-2">{formatCurrency(p.amount)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Amount Received *</label>
                                 <input

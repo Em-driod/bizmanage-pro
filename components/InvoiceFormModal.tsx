@@ -11,6 +11,7 @@ interface LineItem {
     quantity: number;
     unitPrice: number;
     total: number;
+    productId?: string;
 }
 
 interface InvoiceFormModalProps {
@@ -92,6 +93,11 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
             newLineItems[index].total = newLineItems[index].quantity * newLineItems[index].unitPrice;
         } else {
             (newLineItems[index] as any)[field] = value;
+            // Typing over a catalog-filled description breaks the link to that
+            // product — clear it so stock isn't deducted for the wrong item.
+            if (field === 'description') {
+                newLineItems[index].productId = undefined;
+            }
         }
         setLineItems(newLineItems);
     };
@@ -294,7 +300,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                                 key={p._id}
                                                 type="button"
                                                 onClick={() => {
-                                                    const newItem = { description: p.name + (p.description ? ` — ${p.description}` : ''), quantity: 1, unitPrice: p.price, total: p.price };
+                                                    const newItem = { description: p.name + (p.description ? ` — ${p.description}` : ''), quantity: 1, unitPrice: p.price, total: p.price, productId: p._id };
                                                     if (activeLineIndex !== null) {
                                                         // Fill the selected empty row
                                                         const updated = [...lineItems];

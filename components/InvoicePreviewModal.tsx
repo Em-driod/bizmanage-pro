@@ -12,6 +12,9 @@ export interface InvoicePreviewData {
     total: number;
     dueDate: string;
     notes?: string;
+    status?: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue';
+    amountPaid?: number;
+    balance?: number;
 }
 
 // ── Shared invoice card — A4 printed document style ──────────────────────────
@@ -19,6 +22,17 @@ export const InvoiceCard: React.FC<{ data: InvoicePreviewData; formatCurrency: (
     const dueDate = new Date(data.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const issueDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const taxAmount = data.subtotal * (data.tax / 100);
+
+    const paymentState: 'paid' | 'partial' | 'unpaid' =
+        data.status === 'paid' ? 'paid' : data.status === 'partial' ? 'partial' : 'unpaid';
+    const amountPaid = data.amountPaid ?? (paymentState === 'paid' ? data.total : 0);
+    const balance = data.balance ?? (paymentState === 'paid' ? 0 : data.total);
+    const stamp = {
+        paid: { label: 'PAID', color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+        partial: { label: 'PARTIALLY PAID', color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+        unpaid: { label: 'UNPAID', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+    }[paymentState];
+
     return (
         <div style={{ background: '#ffffff', width: '794px', fontFamily: 'Arial, Helvetica, sans-serif', color: '#1a1a1a' }}>
 
@@ -36,7 +50,12 @@ export const InvoiceCard: React.FC<{ data: InvoicePreviewData; formatCurrency: (
                 </div>
                 <div style={{ textAlign: 'right' }}>
                     <p style={{ margin: '0 0 4px', fontSize: '36px', fontWeight: 900, color: '#111827', letterSpacing: '-1px', lineHeight: 1 }}>INVOICE</p>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#6366f1', fontWeight: 700 }}>{data.invoiceNumber}</p>
+                    <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#6366f1', fontWeight: 700 }}>{data.invoiceNumber}</p>
+                    <span style={{
+                        display: 'inline-block', padding: '4px 14px', fontSize: '11px', fontWeight: 900,
+                        letterSpacing: '2px', color: stamp.color, background: stamp.bg,
+                        border: `1.5px solid ${stamp.border}`, borderRadius: '6px',
+                    }}>{stamp.label}</span>
                 </div>
             </div>
 
@@ -96,9 +115,20 @@ export const InvoiceCard: React.FC<{ data: InvoicePreviewData; formatCurrency: (
                         </div>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: '#111827', color: '#fff', marginTop: '8px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Total Due</span>
+                        <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>{paymentState === 'partial' ? 'Invoice Total' : 'Total Due'}</span>
                         <span style={{ fontSize: '20px', fontWeight: 900, color: '#a5b4fc' }}>{formatCurrency(data.total)}</span>
                     </div>
+                    {paymentState === 'partial' && (
+                        <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: '13px', color: '#059669', fontWeight: 700 }}>
+                                <span>Amount Paid</span><span>− {formatCurrency(amountPaid)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#fffbeb', border: '1.5px solid #fde68a', marginTop: '4px', borderRadius: '4px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: '#92400e' }}>Balance Due</span>
+                                <span style={{ fontSize: '18px', fontWeight: 900, color: '#d97706' }}>{formatCurrency(balance)}</span>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
