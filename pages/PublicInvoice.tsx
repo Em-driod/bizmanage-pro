@@ -31,7 +31,9 @@ interface PublicInvoiceData {
   subtotal: number;
   tax: number;
   total: number;
-  status: 'draft' | 'sent' | 'paid' | 'overdue';
+  status: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue';
+  amountPaid?: number;
+  balance?: number;
   dueDate: string;
   notes?: string;
 }
@@ -120,7 +122,9 @@ const PublicInvoice: React.FC = () => {
   const currency = invoice?.businessId?.currency || 'USD';
   const clientName = invoice?.clientId?.name || invoice?.customClientName || 'Client';
   const isPaid = invoice?.status === 'paid' || justPaid;
+  const isPartial = invoice?.status === 'partial' && !isPaid;
   const isOverdue = invoice?.status === 'overdue';
+  const balanceDue = invoice ? (invoice.balance ?? (isPaid ? 0 : invoice.total)) : 0;
   const dueDate = invoice ? new Date(invoice.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
 
   if (isLoading) {
@@ -158,6 +162,20 @@ const PublicInvoice: React.FC = () => {
             <div>
               <p className="font-black text-sm uppercase tracking-wider">Payment Received</p>
               <p className="text-xs text-emerald-100 mt-0.5">Thank you — this invoice has been settled.</p>
+            </div>
+          </div>
+        )}
+
+        {isPartial && (
+          <div className="mb-6 bg-amber-500 text-white rounded-2xl p-5 flex items-center gap-4 shadow-lg shadow-amber-200">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+              <i className="fas fa-hourglass-half text-lg"></i>
+            </div>
+            <div>
+              <p className="font-black text-sm uppercase tracking-wider">Partially Paid</p>
+              <p className="text-xs text-amber-100 mt-0.5">
+                {formatMoney(invoice!.amountPaid ?? 0, currency)} received — {formatMoney(balanceDue, currency)} still due.
+              </p>
             </div>
           </div>
         )}
@@ -242,9 +260,21 @@ const PublicInvoice: React.FC = () => {
                   </div>
                 )}
                 <div className="flex justify-between pt-3 border-t-2 border-slate-100">
-                  <span className="text-base font-black text-slate-900">Total Due</span>
-                  <span className="text-lg font-black text-indigo-600">{formatMoney(invoice.total, currency)}</span>
+                  <span className="text-base font-black text-slate-900">{isPartial ? 'Invoice Total' : 'Total Due'}</span>
+                  <span className={`text-lg font-black ${isPartial ? 'text-slate-500' : 'text-indigo-600'}`}>{formatMoney(invoice.total, currency)}</span>
                 </div>
+                {isPartial && (
+                  <>
+                    <div className="flex justify-between text-sm text-emerald-600 font-semibold">
+                      <span>Amount Paid</span>
+                      <span>− {formatMoney(invoice.amountPaid ?? 0, currency)}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-slate-100">
+                      <span className="text-base font-black text-slate-900">Balance Due</span>
+                      <span className="text-lg font-black text-amber-600">{formatMoney(balanceDue, currency)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -309,7 +339,7 @@ const PublicInvoice: React.FC = () => {
                     onClick={() => setShowPayForm(true)}
                     className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black text-sm uppercase tracking-[2px] rounded-2xl shadow-xl shadow-indigo-200 hover:shadow-indigo-300 transition-all hover:-translate-y-0.5 active:scale-[0.98]"
                   >
-                    <i className="fas fa-lock mr-2"></i>Pay Now — {formatMoney(invoice.total, currency)}
+                    <i className="fas fa-lock mr-2"></i>Pay Now — {formatMoney(balanceDue, currency)}
                   </button>
                 ) : (
                   <form onSubmit={handlePay} className="space-y-3">
@@ -330,7 +360,7 @@ const PublicInvoice: React.FC = () => {
                       disabled={isPaying}
                       className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black text-sm uppercase tracking-[2px] rounded-2xl shadow-xl shadow-indigo-200 transition-all disabled:opacity-60"
                     >
-                      {isPaying ? 'Redirecting to Paystack...' : `Pay ${formatMoney(invoice.total, currency)} securely`}
+                      {isPaying ? 'Redirecting to Paystack...' : `Pay ${formatMoney(balanceDue, currency)} securely`}
                     </button>
                     <button type="button" onClick={() => setShowPayForm(false)} className="w-full py-2 text-xs text-slate-400 hover:text-slate-600">Cancel</button>
                   </form>

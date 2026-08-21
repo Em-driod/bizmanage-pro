@@ -34,6 +34,13 @@ const FREQUENCY_LABELS: Record<string, string> = {
     yearly: 'Yearly',
 };
 
+interface InvoicePayment {
+    amount: number;
+    date: string;
+    method: string;
+    note?: string;
+}
+
 // Define the Invoice type according to the backend model
 interface Invoice {
     _id: string;
@@ -44,9 +51,12 @@ interface Invoice {
     subtotal: number;
     tax: number;
     lineItems: any[];
-    status: 'draft' | 'sent' | 'paid' | 'overdue';
+    status: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue';
     dueDate: string;
     createdAt: string;
+    amountPaid?: number;
+    balance?: number;
+    payments?: InvoicePayment[];
 }
 
 const Invoices: React.FC = () => {
@@ -72,6 +82,13 @@ const Invoices: React.FC = () => {
     const [waGenerating, setWaGenerating] = useState(false);
     const [previewInvoice, setPreviewInvoice] = useState<any | null>(null);
     const waCardRef = useRef<HTMLDivElement>(null);
+
+    // Record payment (full or partial)
+    const [payingInvoice, setPayingInvoice] = useState<Invoice | null>(null);
+    const [payAmount, setPayAmount] = useState('');
+    const [payMethod, setPayMethod] = useState('bank transfer');
+    const [payNote, setPayNote] = useState('');
+    const [isRecordingPayment, setIsRecordingPayment] = useState(false);
 
     // Tab state
     const [activeTab, setActiveTab] = useState<'invoices' | 'recurring'>('invoices');
@@ -148,8 +165,38 @@ const Invoices: React.FC = () => {
         switch (status) {
             case 'draft':    return [{ label: 'Mark Sent', next: 'sent' }];
             case 'sent':     return [{ label: 'Mark Paid', next: 'paid' }, { label: 'Mark Overdue', next: 'overdue' }];
+            case 'partial':  return [{ label: 'Mark Rest Paid', next: 'paid' }];
             case 'overdue':  return [{ label: 'Mark Paid', next: 'paid' }];
             case 'paid':     return [];
+        }
+    };
+
+    const balanceOf = (invoice: Invoice) => invoice.balance ?? (invoice.status === 'paid' ? 0 : invoice.total);
+
+    const openPaymentModal = (invoice: Invoice) => {
+        setPayingInvoice(invoice);
+        setPayAmount(String(balanceOf(invoice)));
+        setPayMethod('bank transfer');
+        setPayNote('');
+    };
+
+    const handleRecordPayment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!payingInvoice) return;
+        const amount = parseFloat(payAmount);
+        if (!amount || amount <= 0) { alert('Enter a valid amount'); return; }
+        setIsRecordingPayment(true);
+        try {
+            await apiRequest(`/invoices/${payingInvoice._id}/payments`, {
+                method: 'POST',
+                body: { amount, method: payMethod, note: payNote || undefined },
+            });
+            setPayingInvoice(null);
+            fetchInvoices(invPage);
+        } catch (err) {
+            alert('Failed to record payment: ' + getErrorMessage(err));
+        } finally {
+            setIsRecordingPayment(false);
         }
     };
 
@@ -375,6 +422,7 @@ const Invoices: React.FC = () => {
         const styles = {
             draft: 'bg-slate-100 text-slate-600',
             sent: 'bg-blue-100 text-blue-600',
+            partial: 'bg-amber-100 text-amber-700',
             paid: 'bg-emerald-100 text-emerald-600',
             overdue: 'bg-rose-100 text-rose-600',
         };
@@ -471,19 +519,24 @@ const Invoices: React.FC = () => {
                                                 <td className="px-8 py-6">
                                                     <p className="text-sm font-bold text-slate-800">{getClientName(invoice)}</p>
                                                 </td>
-                                                <td className="px-8 py-6 font-black text-slate-900">{formatCurrency(invoice.total)}</td>
+                                                <td className="px-8 py-6">
+                                                    <p className="font-black text-slate-900">{formatCurrency(invoice.total)}</p>
+                                                    {invoice.status === 'partial' && (
+                                                        <p className="text-[10px] font-bold text-amber-600 mt-0.5">{formatCurrency(balanceOf(invoice))} left</p>
+                                                    )}
+                                                </td>
                                                 <td className="px-8 py-6 text-sm text-slate-500 font-medium">
                                                     {new Date(invoice.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                                 </td>
                                                 <td className="px-8 py-6">
                                                     <div className="flex items-center gap-2">
                                                         {getStatusChip(invoice.status)}
-                                                        {(invoice.status === 'sent' || invoice.status === 'overdue') && (
+                                                        {(invoice.status === 'sent' || invoice.status === 'overdue' || invoice.status === 'partial') && (
                                                             <button
-                                                                onClick={() => handleUpdateStatus(invoice._id, 'paid')}
+                                                                onClick={() => openPaymentModal(invoice)}
                                                                 className="h-6 px-2.5 text-[10px] font-extrabold uppercase rounded-full bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
                                                             >
-                                                                ✓ Paid
+                                                                Record Payment
                                                             </button>
                                                         )}
                                                     </div>
@@ -551,21 +604,28 @@ const Invoices: React.FC = () => {
                                             <div className="text-right">
                                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Amount</p>
                                                 <p className="text-sm font-black text-slate-900">{formatCurrency(invoice.total)}</p>
+                                                {invoice.status === 'partial' && (
+                                                    <p className="text-[10px] font-bold text-amber-600 mt-0.5">{formatCurrency(balanceOf(invoice))} left</p>
+                                                )}
                                             </div>
                                         </div>
 
                                         <div className="flex gap-2">
+                                            {(invoice.status === 'sent' || invoice.status === 'overdue' || invoice.status === 'partial') && (
+                                                <button
+                                                    onClick={() => openPaymentModal(invoice)}
+                                                    className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                                                >
+                                                    Record Payment
+                                                </button>
+                                            )}
                                             {getNextActions(invoice.status).map(({ label, next }) => (
                                                 <button
                                                     key={next}
                                                     onClick={() => handleUpdateStatus(invoice._id, next)}
-                                                    className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-colors ${
-                                                        next === 'paid'
-                                                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                                            : 'bg-indigo-50 border border-indigo-100 text-indigo-600 active:bg-indigo-100'
-                                                    }`}
+                                                    className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-indigo-50 border border-indigo-100 text-indigo-600 active:bg-indigo-100 transition-colors"
                                                 >
-                                                    {next === 'paid' ? '✓ Mark Paid' : label}
+                                                    {label}
                                                 </button>
                                             ))}
                                             <button
@@ -1056,6 +1116,78 @@ const Invoices: React.FC = () => {
                     data={previewInvoice}
                     onClose={() => setPreviewInvoice(null)}
                 />
+            )}
+
+            {/* Record Payment Modal */}
+            {payingInvoice && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                        <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-5 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-base font-black text-white">Record Payment</h3>
+                                <p className="text-xs text-emerald-100">{payingInvoice.invoiceNumber} · {getClientName(payingInvoice)}</p>
+                            </div>
+                            <button onClick={() => setPayingInvoice(null)} className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors">
+                                <i className="fas fa-times text-sm"></i>
+                            </button>
+                        </div>
+                        <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
+                            <div className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+                                <span className="text-xs font-bold text-slate-500">Balance Due</span>
+                                <span className="text-sm font-black text-slate-900">{formatCurrency(balanceOf(payingInvoice))}</span>
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Amount Received *</label>
+                                <input
+                                    type="number"
+                                    required
+                                    step="0.01"
+                                    min="0.01"
+                                    max={balanceOf(payingInvoice)}
+                                    value={payAmount}
+                                    onChange={e => setPayAmount(e.target.value)}
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 outline-none"
+                                />
+                                {parseFloat(payAmount) > 0 && parseFloat(payAmount) < balanceOf(payingInvoice) && (
+                                    <p className="text-[11px] text-amber-600 font-semibold mt-1.5">
+                                        Leaves {formatCurrency(balanceOf(payingInvoice) - parseFloat(payAmount))} still owing — invoice will be marked "partial".
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Method</label>
+                                <select
+                                    value={payMethod}
+                                    onChange={e => setPayMethod(e.target.value)}
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 outline-none"
+                                >
+                                    <option value="bank transfer">Bank Transfer</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="card">Card</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Note</label>
+                                <input
+                                    type="text"
+                                    placeholder="Optional"
+                                    value={payNote}
+                                    onChange={e => setPayNote(e.target.value)}
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 outline-none"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setPayingInvoice(null)} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                                    Cancel
+                                </button>
+                                <button type="submit" disabled={isRecordingPayment} className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 transition-colors">
+                                    {isRecordingPayment ? 'Saving…' : 'Record Payment'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
         </div>
     );
