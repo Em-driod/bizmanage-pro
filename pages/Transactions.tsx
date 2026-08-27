@@ -3,13 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Transaction, Client, IScannedTransaction, ScanResponse, ProjectSummary } from '../types';
 import { apiRequest, getErrorMessage } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
+import { getCurrencySymbol } from '../utils/currency';
 import ScanTransactionModal from '../components/ScanTransactionModal';
 import ImportCsvModal from '../components/ImportCsvModal';
 import IssueReceiptModal from '../components/IssueReceiptModal';
 import TransactionSummaryModal from '../components/TransactionSummaryModal';
 
 const Transactions: React.FC = () => {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currency } = useCurrency();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category') || '';
@@ -610,7 +611,7 @@ const Transactions: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount ($)</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount ({getCurrencySymbol(currency)})</label>
                   <input
                     type="number" required
                     className="w-full px-4 py-2 rounded-lg border border-slate-200"
