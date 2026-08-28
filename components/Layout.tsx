@@ -339,7 +339,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <main className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-clip">
         <header className="px-4 sm:px-6 lg:px-10 py-4 flex items-center justify-between border-b border-slate-50 bg-white/80 backdrop-blur-sm sticky top-0 z-30">
           <div className="flex items-center gap-3">
             {/* Mobile hamburger */}
@@ -410,7 +410,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
         </header>
 
-        <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10 max-w-7xl mx-auto w-full pb-24 lg:pb-10">
+        <div className="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10 max-w-7xl mx-auto w-full pb-24 lg:pb-10">
           {children}
         </div>
       </main>
