@@ -273,12 +273,12 @@ const Transactions: React.FC = () => {
 
   return (
     <div className="min-h-screen space-y-6 sm:space-y-8 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-8">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 px-1">
-        <div>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 px-1 min-w-0">
+        <div className="min-w-0">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Financial Records</h2>
           <p className="text-sm sm:text-base md:text-lg text-slate-500 font-medium">Track all incoming and outgoing funds with precision.</p>
         </div>
-        <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full sm:w-auto lg:w-auto">
+        <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full sm:w-auto lg:w-auto lg:shrink-0">
           <button
             onClick={() => { navigate('/scanned-transactions'); }}
             className="w-full sm:w-auto lg:w-full bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 sm:px-5 sm:py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-slate-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
