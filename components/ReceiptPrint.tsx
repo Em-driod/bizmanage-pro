@@ -16,15 +16,36 @@ interface ReceiptPrintProps {
         total: number;
         notes?: string;
         dueDate: string;
+        status?: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue';
+        amountPaid?: number;
+        balance?: number;
     };
     client?: Client;
     businessName?: string;
 }
 
+const STATUS_STYLE: Record<string, { label: string; cls: string }> = {
+    paid: { label: 'PAID', cls: 'text-emerald-600' },
+    partial: { label: 'PARTIALLY PAID', cls: 'text-amber-600' },
+    overdue: { label: 'OVERDUE', cls: 'text-rose-600' },
+    sent: { label: 'UNPAID', cls: 'text-rose-600' },
+    draft: { label: 'UNPAID', cls: 'text-rose-600' },
+};
+
 const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ invoice, client, businessName }) => {
     const { formatCurrency } = useCurrency();
 
     if (!invoice) return null;
+
+    // Trust an explicit status; otherwise infer from what was paid.
+    const paid = invoice.amountPaid ?? (invoice.status === 'paid' ? invoice.total : 0);
+    const balance = invoice.balance ?? Math.max(0, invoice.total - paid);
+    const status =
+        invoice.status ?? (paid <= 0 ? 'sent' : paid >= invoice.total ? 'paid' : 'partial');
+    const statusStyle = STATUS_STYLE[status] ?? STATUS_STYLE.sent;
+    const isSettled = status === 'paid';
+    const hasPartPayment = !isSettled && paid > 0;
+    const docLabel = isSettled ? 'Official Receipt' : 'Invoice';
 
     return (
         <div className="print-only p-12 bg-white text-slate-900 font-sans" id="receipt-print-area">
@@ -49,7 +70,7 @@ const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ invoice, client, businessNa
             <div className="flex justify-between items-start mb-12 border-b-2 border-slate-100 pb-8">
                 <div>
                     <h1 className="text-4xl font-black tracking-tight text-indigo-600 mb-2">{businessName || 'Morniy BUSINESS'}</h1>
-                    <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Official Receipt</p>
+                    <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">{docLabel}</p>
                 </div>
                 <div className="text-right">
                     <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Invoice Number</p>
@@ -68,7 +89,12 @@ const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ invoice, client, businessNa
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] mb-4">Payment Details</h3>
                     <p className="text-sm text-slate-500 font-medium">Date: {new Date().toLocaleDateString()}</p>
                     <p className="text-sm text-slate-500 font-medium">Due: {new Date(invoice.dueDate).toLocaleDateString()}</p>
-                    <p className="text-sm font-black text-emerald-600 mt-2 uppercase tracking-widest">Status: PAID</p>
+                    <p className={`text-sm font-black mt-2 uppercase tracking-widest ${statusStyle.cls}`}>Status: {statusStyle.label}</p>
+                    {hasPartPayment && (
+                        <p className="text-xs text-slate-500 font-medium mt-1">
+                            {formatCurrency(paid)} paid of {formatCurrency(invoice.total)}
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -107,6 +133,20 @@ const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ invoice, client, businessNa
                         <span className="text-lg font-black text-slate-900 uppercase tracking-tighter">Grand Total</span>
                         <span className="text-2xl font-black text-indigo-600">{formatCurrency(invoice.total)}</span>
                     </div>
+                    {!isSettled && (
+                        <>
+                            {hasPartPayment && (
+                                <div className="flex justify-between text-sm pt-2">
+                                    <span className="text-slate-400 font-bold uppercase tracking-widest">Amount Paid</span>
+                                    <span className="text-emerald-600 font-black">− {formatCurrency(paid)}</span>
+                                </div>
+                            )}
+                            <div className={`flex justify-between items-center bg-amber-50 border border-amber-200 rounded px-3 py-2 ${hasPartPayment ? '' : 'mt-2'}`}>
+                                <span className="text-sm font-black text-amber-700 uppercase tracking-widest">Balance Due</span>
+                                <span className="text-lg font-black text-amber-600">{formatCurrency(balance)}</span>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 

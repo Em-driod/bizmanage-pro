@@ -159,15 +159,28 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
             const clientData: Client | undefined = useCustomClient
                 ? ({ _id: 'custom', name: customClientName } as unknown as Client)
                 : clients.find(c => c._id === selectedClientId);
+
+            // Prefer the server's derived payment state; fall back to the deposit we sent.
+            const total = calculateTotal();
+            const deposit = parseFloat(depositAmount) || 0;
+            const amountPaid = response.amountPaid ?? deposit;
+            const balance = response.balance ?? Math.max(0, total - deposit);
+            const status =
+                response.status ??
+                (amountPaid <= 0 ? 'sent' : amountPaid >= total ? 'paid' : 'partial');
+
             printReceipt({
                 invoice: {
                     invoiceNumber: response.invoiceNumber,
                     lineItems,
                     subtotal: calculateSubtotal(),
                     tax: taxRate,
-                    total: calculateTotal(),
+                    total,
                     notes,
                     dueDate,
+                    status,
+                    amountPaid,
+                    balance,
                 },
                 client: clientData,
             });
