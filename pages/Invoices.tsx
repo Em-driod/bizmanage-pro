@@ -52,7 +52,7 @@ interface Invoice {
     subtotal: number;
     tax: number;
     lineItems: any[];
-    status: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue';
+    status: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'void';
     dueDate: string;
     createdAt: string;
     amountPaid?: number;
@@ -163,6 +163,21 @@ const Invoices: React.FC = () => {
         }
     };
 
+    // Voiding restores catalog stock and can't be undone, so it's confirm-gated
+    // like the payment actions rather than an instant getNextActions button.
+    const handleVoidInvoice = async (invoice: Invoice) => {
+        if (!confirm(`Void invoice #${invoice.invoiceNumber}? Any stock deducted for its items will be restored. This can't be undone.`)) return;
+        try {
+            await apiRequest(`/invoices/${invoice._id}/status`, {
+                method: 'PUT',
+                body: { status: 'void' },
+            });
+            fetchInvoices();
+        } catch (err) {
+            alert('Failed to void invoice: ' + getErrorMessage(err));
+        }
+    };
+
     // Only status changes that don't touch money/transactions are instant.
     // Anything that can mark an invoice paid/partial must go through the
     // confirm-first Record Payment modal (openPaymentModal) instead.
@@ -173,6 +188,7 @@ const Invoices: React.FC = () => {
             case 'partial':  return [];
             case 'overdue':  return [];
             case 'paid':     return [];
+            case 'void':     return [];
         }
     };
 
@@ -451,6 +467,7 @@ const Invoices: React.FC = () => {
             partial: 'bg-amber-100 text-amber-700',
             paid: 'bg-emerald-100 text-emerald-600',
             overdue: 'bg-rose-100 text-rose-600',
+            void: 'bg-slate-200 text-slate-500 line-through',
         };
         return (
             <span className={`px-3 py-1 text-[10px] font-extrabold uppercase rounded-full ${styles[status]}`}>
@@ -584,9 +601,9 @@ const Invoices: React.FC = () => {
                                                             </button>
                                                         ))}
                                                         <button
-                                                            onClick={() => handleOpenSend(invoice)}
-                                                            title="Send invoice by email"
-                                                            className="w-9 h-9 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 shadow-sm transition-all"
+                                                            disabled
+                                                            title="Send invoice by email — coming soon"
+                                                            className="w-9 h-9 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-300 cursor-not-allowed shadow-sm"
                                                         >
                                                             <i className="fas fa-paper-plane text-xs"></i>
                                                         </button>
@@ -603,6 +620,15 @@ const Invoices: React.FC = () => {
                                                         >
                                                             <i className="fas fa-eye text-xs"></i>
                                                         </button>
+                                                        {(invoice.status === 'draft' || invoice.status === 'sent' || invoice.status === 'overdue') && (
+                                                            <button
+                                                                onClick={() => handleVoidInvoice(invoice)}
+                                                                title="Void invoice"
+                                                                className="w-9 h-9 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-rose-600 hover:border-rose-100 shadow-sm transition-all"
+                                                            >
+                                                                <i className="fas fa-ban text-xs"></i>
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -666,10 +692,11 @@ const Invoices: React.FC = () => {
                                                 </button>
                                             ))}
                                             <button
-                                                onClick={() => handleOpenSend(invoice)}
-                                                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-600 active:bg-slate-50 transition-colors shadow-sm"
+                                                disabled
+                                                title="Send invoice by email — coming soon"
+                                                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-300 cursor-not-allowed shadow-sm"
                                             >
-                                                <i className="fas fa-paper-plane text-xs text-indigo-500"></i>
+                                                <i className="fas fa-paper-plane text-xs"></i>
                                             </button>
                                             <button
                                                 onClick={() => openWaModal(invoice)}
@@ -683,6 +710,14 @@ const Invoices: React.FC = () => {
                                             >
                                                 <i className="fas fa-eye text-xs text-indigo-500"></i>
                                             </button>
+                                            {(invoice.status === 'draft' || invoice.status === 'sent' || invoice.status === 'overdue') && (
+                                                <button
+                                                    onClick={() => handleVoidInvoice(invoice)}
+                                                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-600 active:bg-slate-50 transition-colors shadow-sm"
+                                                >
+                                                    <i className="fas fa-ban text-xs text-rose-500"></i>
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))

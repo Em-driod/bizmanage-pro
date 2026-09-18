@@ -19,11 +19,15 @@ const ScanInvoiceModal: React.FC<ScanInvoiceModalProps> = ({ isOpen, onClose, on
         if (file) {
             setSelectedFile(file);
             setError(null);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            if (file.type === 'application/pdf') {
+                setPreview(null);
+            } else {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setPreview(reader.result as string);
+                };
+                reader.readAsDataURL(file);
+            }
         }
     };
 
@@ -78,16 +82,21 @@ const ScanInvoiceModal: React.FC<ScanInvoiceModalProps> = ({ isOpen, onClose, on
                 </div>
 
                 <div className="space-y-4">
-                    <div className="w-full h-48 border-2 border-dashed border-slate-300 rounded-xl flex justify-center items-center text-slate-500 relative overflow-hidden">
+                    <div className="w-full h-48 border-2 border-dashed border-slate-300 rounded-xl flex flex-col justify-center items-center text-slate-500 relative overflow-hidden gap-2">
                         {preview ? (
                             <img src={preview} alt="Selected invoice" className="h-full w-full object-contain" />
+                        ) : selectedFile ? (
+                            <>
+                                <i className="fas fa-file-pdf text-3xl text-rose-400"></i>
+                                <span className="text-sm font-medium px-4 text-center truncate max-w-full">{selectedFile.name}</span>
+                            </>
                         ) : (
-                            <span>Invoice Image Preview</span>
+                            <span>Invoice Image or PDF Preview</span>
                         )}
                     </div>
                     <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,application/pdf"
                         onChange={handleFileChange}
                         className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                     />

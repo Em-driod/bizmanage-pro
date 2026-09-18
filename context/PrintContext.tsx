@@ -15,7 +15,7 @@ interface PrintData {
         total: number;
         notes?: string;
         dueDate: string;
-        status?: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue';
+        status?: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'void';
         amountPaid?: number;
         balance?: number;
     };
