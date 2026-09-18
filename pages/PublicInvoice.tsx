@@ -31,7 +31,7 @@ interface PublicInvoiceData {
   subtotal: number;
   tax: number;
   total: number;
-  status: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue';
+  status: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'void';
   amountPaid?: number;
   balance?: number;
   dueDate: string;

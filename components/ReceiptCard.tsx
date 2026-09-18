@@ -297,15 +297,15 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
 
         {receipt.payerEmail && (
           <button
-            onClick={handleSendEmail}
-            disabled={sendingEmail || emailSent}
-            className="w-full flex items-center gap-4 px-4 py-3.5 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100 transition-colors disabled:opacity-60"
+            disabled
+            title="Coming soon"
+            className="w-full flex items-center gap-4 px-4 py-3.5 bg-indigo-50 border border-indigo-100 rounded-xl opacity-60 cursor-not-allowed"
           >
             <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
-              {emailSent ? <i className="fas fa-check text-sm"></i> : sendingEmail ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <i className="fas fa-envelope text-sm"></i>}
+              <i className="fas fa-envelope text-sm"></i>
             </div>
             <div className="text-left">
-              <p className="text-sm font-bold text-slate-800">{emailSent ? 'Email Sent!' : 'Send via Email'}</p>
+              <p className="text-sm font-bold text-slate-800">Send via Email <span className="text-[10px] font-extrabold uppercase text-indigo-500">Coming Soon</span></p>
               <p className="text-xs text-slate-500 truncate">{receipt.payerEmail}</p>
             </div>
           </button>

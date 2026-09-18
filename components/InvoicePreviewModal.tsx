@@ -12,7 +12,7 @@ export interface InvoicePreviewData {
     total: number;
     dueDate: string;
     notes?: string;
-    status?: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue';
+    status?: 'draft' | 'sent' | 'partial' | 'paid' | 'overdue' | 'void';
     amountPaid?: number;
     balance?: number;
 }

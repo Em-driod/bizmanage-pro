@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -17,6 +18,7 @@ export interface CommandResponse {
 
 const CommandPalette: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { formatCurrency } = useCurrency();
   const [isOpen, setIsOpen] = useState(false);
   const [command, setCommand] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -79,7 +81,7 @@ const CommandPalette: React.FC = () => {
             category: 'Uncategorized' 
           }
         });
-        setResult({ success: true, message: `Logged ${parsed.data.type} of $${parsed.data.amount}.` });
+        setResult({ success: true, message: `Logged ${parsed.data.type} of ${formatCurrency(parsed.data.amount)}.` });
         setTimeout(() => setIsOpen(false), 2000);
       } 
       else if (parsed.intent === 'QUERY_DATA' && parsed.markdownResponse) {
@@ -230,14 +232,14 @@ const CommandPalette: React.FC = () => {
                 </div>
                 <button 
                   type="button"
-                  onClick={() => setCommand("I just bought coffee for $45.20")}
+                  onClick={() => setCommand("I just bought coffee for 45.20")}
                   className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05] hover:border-white/10 text-left transition-all group"
                 >
                    <div className="w-8 h-8 rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0">
                       <i className="fas fa-arrow-down text-xs"></i>
                    </div>
                    <div>
-                      <p className="text-sm text-slate-300 group-hover:text-white transition-colors">I just bought coffee for $45.20</p>
+                      <p className="text-sm text-slate-300 group-hover:text-white transition-colors">I just bought coffee for 45.20</p>
                    </div>
                 </button>
                 <button 

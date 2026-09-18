@@ -333,10 +333,17 @@ const Users: React.FC = () => {
                                                     {entry.action}
                                                 </span>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-semibold text-slate-700 capitalize">{entry.resource.toLowerCase()}</p>
-                                                    {entry.details && (
+                                                    <p className="text-sm font-semibold text-slate-700">
+                                                        {(entry as any).summary || entry.resource.toLowerCase()}
+                                                    </p>
+                                                    {!(entry as any).summary && entry.details && (
                                                         <p className="text-xs text-slate-400 truncate mt-0.5">
                                                             {Object.entries(entry.details).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                                                        </p>
+                                                    )}
+                                                    {Array.isArray((entry as any).changes) && (entry as any).changes.length > 0 && (
+                                                        <p className="text-xs text-slate-400 truncate mt-0.5">
+                                                            {(entry as any).changes.map((c: any) => c.field).join(', ')} changed
                                                         </p>
                                                     )}
                                                 </div>

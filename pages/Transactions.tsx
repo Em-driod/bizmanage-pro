@@ -3,13 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Transaction, Client, IScannedTransaction, ScanResponse, ProjectSummary } from '../types';
 import { apiRequest, getErrorMessage } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
+import { getCurrencySymbol } from '../utils/currency';
 import ScanTransactionModal from '../components/ScanTransactionModal';
 import ImportCsvModal from '../components/ImportCsvModal';
 import IssueReceiptModal from '../components/IssueReceiptModal';
 import TransactionSummaryModal from '../components/TransactionSummaryModal';
 
 const Transactions: React.FC = () => {
-  const { formatCurrency } = useCurrency();
+  const { formatCurrency, currency } = useCurrency();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category') || '';
@@ -279,36 +280,79 @@ const Transactions: React.FC = () => {
           <p className="text-sm sm:text-base md:text-lg text-slate-500 font-medium">Track all incoming and outgoing funds with precision.</p>
         </div>
         <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full sm:w-auto lg:w-auto lg:shrink-0">
-          <button
-            onClick={() => { navigate('/scanned-transactions'); }}
-            className="w-full sm:w-auto lg:w-full bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 sm:px-5 sm:py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-slate-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
-          >
-            <i className="fas fa-box-archive text-xs text-indigo-400"></i> View Recorded Scans
-          </button>
-          <div className="flex gap-2 w-full sm:w-auto lg:w-full">
+          {/* Phone only: two equal primary actions up top, everything else collapses
+              into a compact tap-strip below so the record list isn't pushed off-screen
+              by a wall of stacked full-width buttons. */}
+          <div className="flex gap-2 w-full sm:hidden">
             <button
               onClick={() => { resetForm(); setShowModal(true); }}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 sm:px-5 sm:py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all active:scale-95 text-sm font-bold"
             >
               <i className="fas fa-plus text-xs"></i> New Entry
             </button>
             <button
               onClick={() => { setShowScanModal(true); }}
               disabled={isSubmitting}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 sm:px-5 sm:py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold disabled:bg-slate-200 disabled:shadow-none"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200 transition-all active:scale-95 text-sm font-bold disabled:bg-slate-200 disabled:shadow-none"
             >
-              <i className="fas fa-camera text-xs"></i> {isSubmitting ? 'Processing...' : 'Scan'}
+              <i className="fas fa-camera text-xs"></i> {isSubmitting ? 'Processing...' : 'Snap'}
+            </button>
+          </div>
+          <div className="flex gap-2 w-full sm:hidden">
+            <button
+              onClick={() => { navigate('/scanned-transactions'); }}
+              className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-50 border border-slate-100 text-slate-600 rounded-xl py-2.5 active:bg-slate-100 transition-colors"
+            >
+              <i className="fas fa-box-archive text-sm text-indigo-400"></i>
+              <span className="text-[10px] font-bold">Scans</span>
+            </button>
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-50 border border-slate-100 text-slate-600 rounded-xl py-2.5 active:bg-slate-100 transition-colors"
+            >
+              <i className="fas fa-file-csv text-sm text-emerald-500"></i>
+              <span className="text-[10px] font-bold">Import</span>
+            </button>
+            <button
+              onClick={() => setShowSummaryModal(true)}
+              className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-50 border border-slate-100 text-slate-600 rounded-xl py-2.5 active:bg-slate-100 transition-colors"
+            >
+              <i className="fas fa-print text-sm text-slate-400"></i>
+              <span className="text-[10px] font-bold">Summary</span>
+            </button>
+          </div>
+
+          {/* sm and up: original stacked/inline layout, unchanged */}
+          <button
+            onClick={() => { navigate('/scanned-transactions'); }}
+            className="hidden sm:flex sm:w-auto lg:w-full bg-slate-800 hover:bg-slate-900 text-white px-5 py-3 lg:px-4 lg:py-2.5 rounded-2xl items-center justify-center gap-2 shadow-lg shadow-slate-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
+          >
+            <i className="fas fa-box-archive text-xs text-indigo-400"></i> View Recorded Scans
+          </button>
+          <div className="hidden sm:flex gap-2 sm:w-auto lg:w-full">
+            <button
+              onClick={() => { resetForm(); setShowModal(true); }}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
+            >
+              <i className="fas fa-plus text-xs"></i> New Entry
+            </button>
+            <button
+              onClick={() => { setShowScanModal(true); }}
+              disabled={isSubmitting}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold disabled:bg-slate-200 disabled:shadow-none"
+            >
+              <i className="fas fa-camera text-xs"></i> {isSubmitting ? 'Processing...' : 'Snap'}
             </button>
           </div>
           <button
             onClick={() => setShowImportModal(true)}
-            className="w-full sm:w-auto lg:w-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 sm:px-5 sm:py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
+            className="hidden sm:flex sm:w-auto lg:w-full bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 lg:px-4 lg:py-2.5 rounded-2xl items-center justify-center gap-2 shadow-lg shadow-emerald-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
           >
             <i className="fas fa-file-csv text-xs"></i> Import CSV
           </button>
           <button
             onClick={() => setShowSummaryModal(true)}
-            className="w-full sm:w-auto lg:w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-2.5 sm:px-5 sm:py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 transition-all text-sm font-bold"
+            className="hidden sm:flex sm:w-auto lg:w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-5 py-3 lg:px-4 lg:py-2.5 rounded-2xl items-center justify-center gap-2 transition-all text-sm font-bold"
           >
             <i className="fas fa-print text-xs text-slate-400"></i> Print Summary
           </button>
@@ -610,7 +654,7 @@ const Transactions: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount ($)</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Amount ({getCurrencySymbol(currency)})</label>
                   <input
                     type="number" required
                     className="w-full px-4 py-2 rounded-lg border border-slate-200"
