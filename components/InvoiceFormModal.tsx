@@ -66,7 +66,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
         fetchProducts();
     }, []);
 
-    // Pre-fill form if initialData is provided (from AI scan)
+    // Pre-fill form if initialData is provided (from a snapped/scanned document)
     useEffect(() => {
         if (initialData) {
             if (initialData.lineItems && initialData.lineItems.length > 0) {

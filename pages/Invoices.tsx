@@ -490,7 +490,7 @@ const Invoices: React.FC = () => {
                                 onClick={() => setShowScanModal(true)}
                                 className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
                             >
-                                <i className="fas fa-camera text-xs"></i> AI Scan
+                                <i className="fas fa-camera text-xs"></i> Snap
                             </button>
                             <button
                                 onClick={() => { setScannedData(null); setShowModal(true); }}

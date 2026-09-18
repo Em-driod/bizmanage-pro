@@ -65,7 +65,7 @@ const Privacy: React.FC = () => {
           <ul className="list-disc pl-5 space-y-1">
             <li>To provide, operate, and maintain the Morniy platform.</li>
             <li>To process transactions, generate invoices/receipts, and calculate business reports.</li>
-            <li>To extract data from scanned receipts/invoices using OCR and AI-assisted parsing.</li>
+            <li>To extract data from scanned receipts/invoices using OCR and automated text parsing.</li>
             <li>To send transactional emails (e.g. invoice, proposal, payslip, and receipt notifications).</li>
             <li>To maintain security, prevent fraud, and keep an audit trail of account activity.</li>
             <li>To communicate with you about your account or respond to support requests.</li>
@@ -75,7 +75,7 @@ const Privacy: React.FC = () => {
         <Section title="5. Data sharing">
           <p>
             We do not sell your personal information. We share data only with service providers that help us operate
-            Morniy (e.g. cloud hosting, database, email delivery, payment processing, AI-assisted document parsing),
+            Morniy (e.g. cloud hosting, database, email delivery, payment processing),
             each bound by their own confidentiality and data protection obligations, and only to the extent necessary
             to provide the service. We may disclose information if required by law.
           </p>

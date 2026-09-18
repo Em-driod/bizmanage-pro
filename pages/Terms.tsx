@@ -87,7 +87,7 @@ const Terms: React.FC = () => {
           <p>
             Morniy is provided "as is" without warranties of any kind. To the maximum extent permitted by law, we are
             not liable for indirect, incidental, or consequential damages arising from your use of the service,
-            including reliance on automated features such as OCR/AI document scanning or tax calculations, which
+            including reliance on automated features such as OCR document scanning or tax calculations, which
             should be reviewed before relying on them for filings or payments.
           </p>
         </Section>

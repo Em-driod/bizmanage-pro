@@ -707,7 +707,7 @@ const Dashboard: React.FC = () => {
                 <i className="fas fa-crown text-amber-300 text-xs sm:text-base md:text-lg"></i>
               </div>
               <h4 className="text-sm sm:text-base md:text-lg font-black mb-1">Upgrade to Pro</h4>
-              <p className="text-[10px] sm:text-xs md:text-sm text-indigo-100 mb-4 font-medium leading-tight">Unlock advanced analytics and unlimited AI scans.</p>
+              <p className="text-[10px] sm:text-xs md:text-sm text-indigo-100 mb-4 font-medium leading-tight">Unlock advanced analytics and unlimited scans.</p>
               <button className="text-xs md:text-sm font-bold bg-white text-indigo-600 hover:bg-indigo-50 px-4 py-2 sm:py-2.5 md:py-3 rounded-xl w-full transition-colors shadow-lg">
                 Get Started
               </button>

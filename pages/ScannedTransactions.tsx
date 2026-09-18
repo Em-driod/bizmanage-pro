@@ -182,7 +182,7 @@ const ScannedTransactions: React.FC = () => {
       <div className="px-1">
         <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Review Library</h2>
         <p className="text-sm sm:text-base text-slate-500 font-medium leading-relaxed max-w-2xl">
-          Approve and commit financial data extracted from your AI-scanned documents into your primary ledgers.
+          Approve and commit financial data extracted from your scanned documents into your primary ledgers.
         </p>
       </div>
 

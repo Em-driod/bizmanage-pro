@@ -449,7 +449,7 @@ const Landing: React.FC = () => {
   ];
 
   const proofPoints = [
-    { quote: "Snap a photo of a receipt or invoice and let AI vision extract the amount, date, and vendor automatically — no manual entry.", title: 'AI Receipt & Invoice Scanning', icon: 'M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm4 3h8M8 12h8M8 16h5', accent: '#4F46E5' },
+    { quote: "Snap a photo of a receipt or invoice and we extract the amount, date, and vendor automatically — no manual entry.", title: 'Receipt & Invoice Scanning', icon: 'M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm4 3h8M8 12h8M8 16h5', accent: '#4F46E5' },
     { quote: "Run salaries for your whole team in one click, with payslips generated and a full paper trail — down from hours to seconds.", title: 'One-Click Payroll', icon: 'M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z', accent: '#059669' },
     { quote: "Every naira tracked across currencies, with tax computed to Nigerian PIT bands and reliefs — no accountant required to get started.", title: 'Multi-Currency + Nigerian Tax', icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14.5V18h-2v-1.5c-1.77-.44-3-1.96-3-3.5h2c0 1.1.9 2 2 2s2-.9 2-2c0-1.1-.9-2-2-2-2.21 0-4-1.79-4-4 0-1.54 1.23-3.06 3-3.5V6h2v1.5c1.77.44 3 1.96 3 3.5h-2c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2c2.21 0 4 1.79 4 4 0 1.54-1.23 3.06-3 3.5z', accent: '#E11D48' },
   ];

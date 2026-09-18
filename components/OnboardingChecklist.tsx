@@ -29,7 +29,7 @@ const OnboardingChecklist: React.FC = () => {
     { key: 'hasClient',      label: 'Add your first client',      sub: 'Start tracking who you do business with.',  icon: 'fa-user-plus',    path: '/clients',               done: status.hasClient },
     { key: 'hasTransaction', label: 'Log a transaction',           sub: 'Record income or an expense.',              icon: 'fa-receipt',       path: '/transactions',          done: status.hasTransaction },
     { key: 'hasInvoice',     label: 'Create an invoice',           sub: 'Bill a client and send it by email.',       icon: 'fa-file-invoice',  path: '/invoices',              done: status.hasInvoice },
-    { key: 'hasScannedDoc',  label: 'Scan a receipt or document',  sub: 'Let AI extract the data for you.',          icon: 'fa-camera',        path: '/scanned-transactions',  done: status.hasScannedDoc },
+    { key: 'hasScannedDoc',  label: 'Snap a receipt or document',  sub: 'We extract the data for you automatically.', icon: 'fa-camera',        path: '/scanned-transactions',  done: status.hasScannedDoc },
   ];
 
   const doneCount = steps.filter(s => s.done).length;
