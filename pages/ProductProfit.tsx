@@ -173,7 +173,11 @@ const ProductProfit: React.FC = () => {
         const data = await apiRequest<ProfitReport>(`/reporting/product-profit?${baseQuery}`);
         setReport(data);
       } catch (err: any) {
-        setError(err?.message || 'Could not load the profit report');
+        setError(
+          err?.status === 404
+            ? "The server hasn't been updated with profit tracking yet — it will work as soon as the latest backend is deployed."
+            : err?.message || 'Could not load the profit report',
+        );
       } finally {
         if (!opts.silent) setLoading(false);
       }
