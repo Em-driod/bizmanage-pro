@@ -4,6 +4,7 @@ import { apiRequest, newIdempotencyKey } from '../services/api';
 import { Client, ScannedInvoice } from '../types';
 import { useCurrency } from '../context/CurrencyContext';
 import { usePrint } from '../context/PrintContext';
+import { useBranding } from '../context/BrandingContext';
 import type { Product } from '../pages/Products';
 
 interface LineItem {
@@ -39,6 +40,8 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
     // The modal mounts fresh each time it opens, so this is one key per invoice
     // being created: a double-click or retry can't create the invoice twice.
     const createKeyRef = useRef(newIdempotencyKey());
+    const skipBankCheckRef = useRef(false);
+    const { branding, loaded: brandingLoaded } = useBranding();
     const [error, setError] = useState<string | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
     const [showCatalog, setShowCatalog] = useState(false);
@@ -143,14 +146,11 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
     const handleSaveAndPrint = async () => {
         setError(null);
 
-        // Check bank details first
-        try {
-            const biz = await apiRequest<any>('/businesses/me');
-            if (!biz?.profile?.accountNumber) {
-                setShowBankPrompt(true);
-                return;
-            }
-        } catch { /* proceed anyway if check fails */ }
+        // Clients need somewhere to pay — nudge once if no bank account is set.
+        if (brandingLoaded && !branding.hasBankDetails && !skipBankCheckRef.current) {
+            setShowBankPrompt(true);
+            return;
+        }
 
         setIsLoading(true);
 
@@ -205,17 +205,17 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                     <h3 className="text-lg font-bold text-slate-800">Add Your Bank Details First</h3>
                     <p className="text-sm text-slate-500">
                         Your invoice needs a bank account number so clients know where to pay you.
-                        Add it in Settings and come back.
+                        Add it under Storefront → bank details, then come back.
                     </p>
                     <div className="flex flex-col gap-2 pt-2">
                         <button
-                            onClick={() => { onClose(); navigate('/businesses'); }}
+                            onClick={() => { onClose(); navigate('/storefront'); }}
                             className="w-full py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
                         >
-                            Go to Settings
+                            Add Bank Details
                         </button>
                         <button
-                            onClick={() => setShowBankPrompt(false)}
+                            onClick={() => { skipBankCheckRef.current = true; setShowBankPrompt(false); handleSaveAndPrint(); }}
                             className="w-full py-2.5 text-slate-500 text-sm hover:text-slate-700"
                         >
                             Continue anyway

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../constants';
 import { toPng } from 'html-to-image';
+import BrandMark from '../components/BrandMark';
 
 interface ReceiptData {
   receiptNumber: string;
@@ -22,6 +23,8 @@ const lineParts = (item: { amount: number; quantity?: number }) => {
 
 interface BusinessData {
   name: string;
+  logoImage?: string | null;
+  accentColor?: string | null;
   email?: string;
   phone?: string;
   address?: string;
@@ -120,11 +123,20 @@ const PublicReceipt: React.FC = () => {
         {/* Header */}
         <div className="bg-gradient-to-br from-emerald-600 to-emerald-500 px-8 py-8">
           <div className="flex items-start justify-between">
-            <div>
+            <div className="flex items-start gap-4 min-w-0">
+              <BrandMark
+                name={business?.name || ''}
+                logo={business?.logoImage}
+                color="rgba(255,255,255,0.2)"
+                size={56}
+                radius={16}
+              />
+              <div className="min-w-0">
               <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1">Receipt from</p>
               <h1 className="text-2xl font-black text-white">{business?.name}</h1>
               {business?.email && <p className="text-sm text-emerald-100 mt-1">{business.email}</p>}
               {business?.phone && <p className="text-sm text-emerald-100">{business.phone}</p>}
+              </div>
             </div>
             <div className="bg-white/20 rounded-xl px-4 py-3 text-right">
               <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest">Receipt No.</p>

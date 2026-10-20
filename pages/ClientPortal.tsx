@@ -262,7 +262,7 @@ const ClientPortal: React.FC = () => {
         {/* Powered by */}
         <div className="text-center pt-4">
           <a
-            href="https://Morniy-d0nw.onrender.com/#/register"
+            href="/register"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white/20 hover:text-white/40 transition-colors"

@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest, getErrorMessage } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
-import { useAuth } from '../context/AuthContext';
 import IssueReceiptModal from '../components/IssueReceiptModal';
 import ReceiptCard, { ReceiptData } from '../components/ReceiptCard';
 
 const Receipts: React.FC = () => {
   const { formatCurrency } = useCurrency();
-  const { user } = useAuth();
   const [receipts, setReceipts] = useState<ReceiptData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -155,7 +153,7 @@ const Receipts: React.FC = () => {
               </button>
             </div>
             <div className="overflow-y-auto flex-1">
-              <ReceiptCard receipt={viewing} businessName={user?.businessName} onClose={() => setViewing(null)} />
+              <ReceiptCard receipt={viewing} onClose={() => setViewing(null)} />
             </div>
           </div>
         </div>

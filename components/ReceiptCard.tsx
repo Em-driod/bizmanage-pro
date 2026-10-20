@@ -4,6 +4,8 @@ import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
+import { useBranding } from '../context/BrandingContext';
+import BrandMark from './BrandMark';
 
 export interface ReceiptData {
   _id: string;
@@ -32,6 +34,8 @@ const lineParts = (item: { amount: number; quantity?: number }) => {
 
 const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
   const { formatCurrency } = useCurrency();
+  const { branding } = useBranding();
+  const name = businessName || branding.name;
   const [isSharing, setIsSharing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -135,9 +139,12 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
 
           <div style={{ padding: '32px 36px 22px', background: '#0f172a' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <p style={{ margin: '0 0 6px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: '#475569' }}>Official Receipt</p>
-                <p style={{ margin: 0, fontSize: '19px', fontWeight: 900, color: '#f8fafc', letterSpacing: '-0.5px' }}>{businessName || 'Morniy Business'}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                <BrandMark name={name} logo={branding.logoImage} color={branding.accentColor} size={44} radius={12} />
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: '0 0 6px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: '#475569' }}>Official Receipt</p>
+                  <p style={{ margin: 0, fontSize: '19px', fontWeight: 900, color: '#f8fafc', letterSpacing: '-0.5px' }}>{name}</p>
+                </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: '#475569' }}>Receipt No.</p>
@@ -349,9 +356,12 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
       </div>
 
       <div className="flex justify-between items-start mb-10 border-b-2 border-slate-100 pb-8">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-emerald-700 mb-1">{businessName || 'Morniy Business'}</h1>
-          <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Official Receipt</p>
+        <div className="flex items-center gap-4">
+          {branding.logoImage && <BrandMark name={name} logo={branding.logoImage} size={64} radius={14} />}
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-emerald-700 mb-1">{name}</h1>
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Official Receipt</p>
+          </div>
         </div>
         <div className="text-right">
           <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Receipt No.</p>

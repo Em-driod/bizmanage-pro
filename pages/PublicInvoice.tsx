@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../constants';
 import { toPng } from 'html-to-image';
+import BrandMark from '../components/BrandMark';
 
 interface LineItem {
   description: string;
@@ -17,6 +18,11 @@ interface PublicInvoiceData {
     name: string;
     currency: string;
     profile?: {
+      logoImage?: string;
+      accentColor?: string;
+      email?: string;
+      whatsapp?: string;
+      location?: string;
       bankName?: string;
       accountNumber?: string;
       accountName?: string;
@@ -37,6 +43,11 @@ interface PublicInvoiceData {
   dueDate: string;
   notes?: string;
 }
+
+// The business's brand colour as the header gradient; falls back to the default
+// indigo classes when no valid colour is set.
+const brandHeader = (accent?: string): React.CSSProperties | undefined =>
+  accent && /^#[0-9a-f]{6}$/i.test(accent) ? { backgroundImage: `linear-gradient(135deg, ${accent}, ${accent}cc)` } : undefined;
 
 const PublicInvoice: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -196,14 +207,31 @@ const PublicInvoice: React.FC = () => {
         <div ref={invoiceCardRef} className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden">
 
           {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-violet-700 px-5 sm:px-8 py-6 sm:py-8">
+          <div
+            className="bg-gradient-to-r from-indigo-600 to-violet-700 px-5 sm:px-8 py-6 sm:py-8"
+            style={brandHeader(invoice.businessId.profile?.accentColor)}
+          >
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[3px] text-indigo-200 mb-1">Invoice from</p>
-                <h1 className="text-2xl font-black text-white">{invoice.businessId.name}</h1>
+              <div className="flex items-center gap-4 min-w-0">
+                <BrandMark
+                  name={invoice.businessId.name}
+                  logo={invoice.businessId.profile?.logoImage}
+                  color="rgba(255,255,255,0.18)"
+                  size={56}
+                  radius={16}
+                />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[3px] text-white/70 mb-1">Invoice from</p>
+                  <h1 className="text-2xl font-black text-white break-words">{invoice.businessId.name}</h1>
+                  {(invoice.businessId.profile?.email || invoice.businessId.profile?.whatsapp) && (
+                    <p className="text-xs text-white/75 mt-0.5">
+                      {[invoice.businessId.profile?.email, invoice.businessId.profile?.whatsapp].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="bg-white/15 rounded-2xl px-5 py-3 text-right">
-                <p className="text-[10px] font-black uppercase tracking-[2px] text-indigo-200">Invoice</p>
+                <p className="text-[10px] font-black uppercase tracking-[2px] text-white/70">Invoice</p>
                 <p className="text-xl font-black text-white mt-0.5">{invoice.invoiceNumber}</p>
               </div>
             </div>
@@ -373,7 +401,7 @@ const PublicInvoice: React.FC = () => {
         <div className="text-center mt-8 pb-2">
           <p className="text-xs text-slate-400 mb-2">Invoiced with</p>
           <a
-            href="https://Morniy-d0nw.onrender.com/#/register"
+            href="/register"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm"

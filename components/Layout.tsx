@@ -5,6 +5,8 @@ import CurrencySelector from './CurrencySelector';
 import { apiRequest } from '../services/api';
 import { usePrint } from '../context/PrintContext';
 import ReceiptPrint from './ReceiptPrint';
+import BrandMark from './BrandMark';
+import { useBranding } from '../context/BrandingContext';
 import SearchModal from './SearchModal';
 
 // Lazy: pulls in the heavy html5-qrcode camera library, only needed once someone opens the scanner.
@@ -67,6 +69,7 @@ const BOTTOM_NAV = [
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, isAdmin } = useAuth();
+  const { branding, loaded } = useBranding();
   const { printData } = usePrint();
   const navigate = useNavigate();
   const location = useLocation();
@@ -185,10 +188,22 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           .sidebar-nav::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 99px; }
         `}</style>
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="px-6 py-3 flex-shrink-0 border-b border-slate-50">
-            <Link to="/">
-              <img src="/ner.png" alt="Morniy" className="h-14 w-auto object-contain" />
+          {/* Business brand — the user's own logo and name, linking to settings */}
+          <div className="px-4 py-4 flex-shrink-0 border-b border-slate-50">
+            <Link to="/business" className="flex items-center gap-3 min-w-0 group" title="Business settings">
+              <BrandMark name={branding.name} logo={branding.logoImage} color={branding.accentColor} size={40} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-black text-slate-900 truncate leading-tight group-hover:text-indigo-600 transition-colors">
+                  {branding.name}
+                </p>
+                {loaded && !branding.logoImage && isAdmin ? (
+                  <p className="text-[10px] font-bold text-indigo-500 mt-0.5">
+                    <i className="fas fa-image mr-1"></i>Add your logo
+                  </p>
+                ) : (
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">on Morniy</p>
+                )}
+              </div>
             </Link>
           </div>
 
@@ -484,7 +499,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <ReceiptPrint
           invoice={printData.invoice}
           client={printData.client}
-          businessName={user?.businessName || 'OPSFLOW BUSINESS'}
+          businessName={branding.name}
         />
       )}
       {isSearchOpen && <SearchModal onClose={() => setIsSearchOpen(false)} />}

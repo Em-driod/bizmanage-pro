@@ -5,6 +5,8 @@ import { Business } from '../types';
 import { apiRequest } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useBranding } from '../context/BrandingContext';
+import { prepareLogo } from '../utils/logo';
 import type { Product } from './Products';
 
 interface ServiceItem { name: string; description?: string; price?: number; image?: string; }
@@ -57,6 +59,7 @@ const SectionCard: React.FC<{ icon: string; title: string; subtitle?: string; ch
 
 const Storefront: React.FC = () => {
   const { user } = useAuth();
+  const { refresh: refreshBranding } = useBranding();
   const { formatCurrency } = useCurrency();
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,6 +111,8 @@ const Storefront: React.FC = () => {
       if (data.slug) {
         setShareUrl(`${window.location.origin}/biz/${data.slug}`);
       }
+      // Logo, colour and bank details are shared with invoices, receipts and the sidebar.
+      refreshBranding();
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);
     } catch (err: any) { alert(err.message); }
@@ -320,8 +325,11 @@ const Storefront: React.FC = () => {
                 <i className="fas fa-camera text-white" />
                 <input type="file" accept="image/*" className="hidden" onChange={async e => {
                   const f = e.target.files?.[0]; if (!f) return;
-                  const b64 = await toBase64(f);
-                  setProfile(p => ({ ...p, logoImage: b64 }));
+                  try {
+                    const logo = await prepareLogo(f);
+                    setProfile(p => ({ ...p, logoImage: logo }));
+                  } catch (err: any) { alert(err.message); }
+                  e.target.value = '';
                 }} />
               </label>
               {profile.logoImage && (

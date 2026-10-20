@@ -4,6 +4,9 @@ import { Business } from '../types';
 import { apiRequest } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
+import BrandingSettings from '../components/BrandingSettings';
+import BrandMark from '../components/BrandMark';
+import { useBranding } from '../context/BrandingContext';
 
 const inputCls = 'w-full h-11 px-4 bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 outline-none transition-all text-sm placeholder:text-slate-300';
 const labelCls = 'block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5';
@@ -11,6 +14,7 @@ const labelCls = 'block text-[10px] font-black uppercase tracking-widest text-sl
 const BusinessPage: React.FC = () => {
   const { user } = useAuth();
   const { availableCurrencies } = useCurrency();
+  const { branding, update: updateBranding } = useBranding();
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -44,6 +48,7 @@ const BusinessPage: React.FC = () => {
     try {
       await apiRequest(`/businesses/${user?.businessId}`, { method: 'PUT', body: formData });
       setBusiness({ ...business!, ...formData });
+      if (formData.name) updateBranding({ name: formData.name });
       setIsEditing(false);
     } catch (err: any) { alert(err.message); }
   };
@@ -77,16 +82,13 @@ const BusinessPage: React.FC = () => {
     </div>
   );
 
-  const initials = business?.name?.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() || '??';
 
   return (
     <div className="min-h-screen pb-24 lg:pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
 
       {/* ── Page Hero ── */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm tracking-tight">{initials}</span>
-        </div>
+        <BrandMark name={business?.name || ''} logo={branding.logoImage} color={branding.accentColor} size={44} radius={12} />
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Workspace</p>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-tight truncate">{business?.name || 'Your Business'}</h1>
@@ -117,6 +119,8 @@ const BusinessPage: React.FC = () => {
             <i className="fas fa-arrow-right text-slate-300 text-xs group-hover:translate-x-1 transition-transform"></i>
           </div>
         </Link>
+
+        <BrandingSettings />
 
         {/* Info card */}
         <div className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">

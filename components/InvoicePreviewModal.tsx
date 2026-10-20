@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import { useCurrency } from '../context/CurrencyContext';
+import { useBranding } from '../context/BrandingContext';
+import BrandMark from './BrandMark';
 
 export interface InvoicePreviewData {
     invoiceNumber: string;
@@ -22,6 +24,7 @@ export const InvoiceCard: React.FC<{ data: InvoicePreviewData; formatCurrency: (
     const dueDate = new Date(data.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const issueDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const taxAmount = data.subtotal * (data.tax / 100);
+    const { branding } = useBranding();
 
     const paymentState: 'paid' | 'partial' | 'unpaid' =
         data.status === 'paid' ? 'paid' : data.status === 'partial' ? 'partial' : 'unpaid';
@@ -44,9 +47,12 @@ export const InvoiceCard: React.FC<{ data: InvoicePreviewData; formatCurrency: (
 
             {/* Header: business name + INVOICE label */}
             <div style={{ padding: '36px 48px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #e5e7eb' }}>
-                <div>
-                    <h1 style={{ margin: '0 0 4px', fontSize: '26px', fontWeight: 900, color: '#111827', letterSpacing: '-0.5px' }}>{data.businessName}</h1>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>Nigeria</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {branding.logoImage && <BrandMark name={data.businessName} logo={branding.logoImage} size={64} radius={14} />}
+                    <div>
+                        <h1 style={{ margin: '0 0 4px', fontSize: '26px', fontWeight: 900, color: '#111827', letterSpacing: '-0.5px' }}>{data.businessName}</h1>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>Nigeria</p>
+                    </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                     <p style={{ margin: '0 0 4px', fontSize: '36px', fontWeight: 900, color: '#111827', letterSpacing: '-1px', lineHeight: 1 }}>INVOICE</p>

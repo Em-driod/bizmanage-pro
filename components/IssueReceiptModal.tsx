@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
-import { useAuth } from '../context/AuthContext';
 import { Client } from '../types';
 import ReceiptCard, { ReceiptData } from './ReceiptCard';
 
@@ -39,7 +38,6 @@ interface Props {
 
 const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose, onCreated }) => {
   const { formatCurrency } = useCurrency();
-  const { user } = useAuth();
   const [step, setStep] = useState<'form' | 'share'>('form');
   const [saving, setSaving] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
@@ -370,7 +368,7 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
               </div>
             </form>
           ) : receipt ? (
-            <ReceiptCard receipt={receipt} businessName={user?.businessName} onClose={onClose} />
+            <ReceiptCard receipt={receipt} onClose={onClose} />
           ) : null}
         </div>
       </div>

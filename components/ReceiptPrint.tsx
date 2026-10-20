@@ -1,5 +1,7 @@
 import React from 'react';
 import { useCurrency } from '../context/CurrencyContext';
+import { useBranding } from '../context/BrandingContext';
+import BrandMark from './BrandMark';
 import { Client } from '../types';
 
 interface ReceiptPrintProps {
@@ -34,6 +36,8 @@ const STATUS_STYLE: Record<string, { label: string; cls: string }> = {
 
 const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ invoice, client, businessName }) => {
     const { formatCurrency } = useCurrency();
+    const { branding } = useBranding();
+    const name = businessName || branding.name;
 
     if (!invoice) return null;
 
@@ -76,9 +80,12 @@ const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ invoice, client, businessNa
       `}} />
 
             <div className="flex justify-between items-start mb-6 border-b-2 border-slate-100 pb-4">
-                <div>
-                    <h1 className="text-2xl font-black tracking-tight text-indigo-600 mb-0.5">{businessName || 'Morniy BUSINESS'}</h1>
-                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest">{docLabel}</p>
+                <div className="flex items-center gap-3">
+                    {branding.logoImage && <BrandMark name={name} logo={branding.logoImage} size={52} />}
+                    <div>
+                        <h1 className="text-2xl font-black tracking-tight mb-0.5" style={{ color: branding.accentColor }}>{name}</h1>
+                        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest">{docLabel}</p>
+                    </div>
                 </div>
                 <div className="text-right">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Invoice Number</p>

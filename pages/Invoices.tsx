@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { apiRequest, getErrorMessage, newIdempotencyKey } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
 import { usePrint } from '../context/PrintContext';
-import { useAuth } from '../context/AuthContext';
 import InvoiceFormModal from '../components/InvoiceFormModal';
 import ScanInvoiceModal from '../components/ScanInvoiceModal';
 import InvoicePreviewModal, { InvoiceCard, InvoicePreviewData } from '../components/InvoicePreviewModal';
 import { toPng } from 'html-to-image';
 import { ScannedInvoice, Client } from '../types';
+import { useBranding } from '../context/BrandingContext';
 
 interface RecurringInvoice {
     _id: string;
@@ -63,7 +63,7 @@ interface Invoice {
 const Invoices: React.FC = () => {
     const { formatCurrency } = useCurrency();
     const { printReceipt } = usePrint();
-    const { user } = useAuth();
+    const { branding } = useBranding();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [invTotal, setInvTotal] = useState(0);
     const [invPage, setInvPage] = useState(1);
@@ -420,7 +420,7 @@ const Invoices: React.FC = () => {
             setPreviewInvoice({
                 invoiceNumber: fullInvoice.invoiceNumber,
                 clientName,
-                businessName: user?.businessName || 'My Business',
+                businessName: branding.name,
                 lineItems: fullInvoice.lineItems.map((item: any) => ({
                     description: item.description,
                     quantity: item.quantity,
@@ -1122,7 +1122,7 @@ const Invoices: React.FC = () => {
                                     data={{
                                         invoiceNumber: waInvoice.invoiceNumber,
                                         clientName: getClientName(waInvoice),
-                                        businessName: user?.businessName || 'My Business',
+                                        businessName: branding.name,
                                         lineItems: waInvoice.lineItems.map((item: any) => ({
                                             description: item.description,
                                             quantity: item.quantity,

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { PrintProvider } from './context/PrintContext';
+import { BrandingProvider } from './context/BrandingContext';
 import { SocketProvider } from './context/SocketContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
@@ -115,6 +116,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <NotificationProvider>
+        <BrandingProvider>
         <CurrencyProvider>
           <PrintProvider>
             <SocketProvider>
@@ -128,6 +130,7 @@ const App: React.FC = () => {
             </SocketProvider>
           </PrintProvider>
         </CurrencyProvider>
+        </BrandingProvider>
       </NotificationProvider>
     </AuthProvider>
   );

@@ -306,7 +306,7 @@ const PublicProposal: React.FC = () => {
         <div className="text-center pb-8">
           <p className="text-[11px] text-white/20 mb-2">Built with</p>
           <a
-            href="https://Morniy-d0nw.onrender.com/#/register"
+            href="/register"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/10 text-white/70 hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all"
