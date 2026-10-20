@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiRequest } from '../services/api';
+import { apiRequest, newIdempotencyKey } from '../services/api';
 import { Client, ScannedInvoice } from '../types';
 import { useCurrency } from '../context/CurrencyContext';
 import { usePrint } from '../context/PrintContext';
@@ -36,6 +36,9 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
     const [notes, setNotes] = useState('');
     const [depositAmount, setDepositAmount] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    // The modal mounts fresh each time it opens, so this is one key per invoice
+    // being created: a double-click or retry can't create the invoice twice.
+    const createKeyRef = useRef(newIdempotencyKey());
     const [error, setError] = useState<string | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
     const [showCatalog, setShowCatalog] = useState(false);
@@ -153,7 +156,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
 
         try {
             const payload = buildPayload();
-            const response = await apiRequest<any>('/invoices', { method: 'POST', body: payload });
+            const response = await apiRequest<any>('/invoices', { method: 'POST', body: payload, idempotencyKey: createKeyRef.current });
 
             // Trigger print
             const clientData: Client | undefined = useCustomClient
@@ -495,7 +498,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                 setIsLoading(true);
                                 try {
                                     const payload = buildPayload();
-                                    await apiRequest('/invoices', { method: 'POST', body: payload });
+                                    await apiRequest('/invoices', { method: 'POST', body: payload, idempotencyKey: createKeyRef.current });
                                     onSave();
                                     onClose();
                                 } catch (err: any) {

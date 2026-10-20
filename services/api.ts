@@ -7,6 +7,18 @@ interface ApiRequestOptions {
   body?: unknown;
   headers?: Record<string, string>;
   useFormData?: boolean;
+  /**
+   * Makes a POST safe to retry: the server replays the first response for a
+   * repeated key instead of acting twice. Create one per user action (e.g. when
+   * a form opens) with newIdempotencyKey() and reuse it for retries/double-clicks.
+   */
+  idempotencyKey?: string;
+}
+
+export function newIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  // Fallback for older WebViews without crypto.randomUUID.
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 }
 
 export class ApiError extends Error {
@@ -21,12 +33,13 @@ export class ApiError extends Error {
 }
 
 export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, headers = {}, useFormData = false } = options;
+  const { method = 'GET', body, headers = {}, useFormData = false, idempotencyKey } = options;
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
 
   const defaultHeaders: Record<string, string> = {};
   if (!useFormData) defaultHeaders['Content-Type'] = 'application/json';
   if (token) defaultHeaders['Authorization'] = `Bearer ${token}`;
+  if (idempotencyKey) defaultHeaders['Idempotency-Key'] = idempotencyKey;
 
   const config: RequestInit = {
     method,

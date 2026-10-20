@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { apiRequest, getErrorMessage } from '../services/api';
+import { apiRequest, getErrorMessage, newIdempotencyKey } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
 import { usePrint } from '../context/PrintContext';
 import { useAuth } from '../context/AuthContext';
@@ -90,6 +90,7 @@ const Invoices: React.FC = () => {
     const [payMethod, setPayMethod] = useState('bank transfer');
     const [payNote, setPayNote] = useState('');
     const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+    const payKeyRef = useRef<string>(newIdempotencyKey());
     const [isUndoingPayment, setIsUndoingPayment] = useState(false);
 
     // Tab state
@@ -197,6 +198,9 @@ const Invoices: React.FC = () => {
     const paidPct = (invoice: Invoice) => invoice.total > 0 ? Math.min(100, Math.max(0, (amountPaidOf(invoice) / invoice.total) * 100)) : 0;
 
     const openPaymentModal = (invoice: Invoice) => {
+        // One key per opened payment form: a double-click or retry of the same
+        // submission is recorded once; a new form opening gets a fresh key.
+        payKeyRef.current = newIdempotencyKey();
         setPayingInvoice(invoice);
         setPayAmount(String(balanceOf(invoice)));
         setPayMethod('bank transfer');
@@ -213,6 +217,7 @@ const Invoices: React.FC = () => {
             await apiRequest(`/invoices/${payingInvoice._id}/payments`, {
                 method: 'POST',
                 body: { amount, method: payMethod, note: payNote || undefined },
+                idempotencyKey: payKeyRef.current,
             });
             setPayingInvoice(null);
             fetchInvoices(invPage);
