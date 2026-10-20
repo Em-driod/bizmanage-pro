@@ -132,7 +132,9 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
         method: 'POST',
         body: {
           ...form,
-          items: items.map(({ description, amount, productId, quantity }) => ({ description, amount, productId, quantity })),
+          // transactionId per line lets the profit report skip lines that just
+          // re-state an invoice payment (already counted on the invoice).
+          items: items.map(({ description, amount, productId, quantity, transactionId }) => ({ description, amount, productId, quantity, transactionId })),
           transactionIds: items.map(it => it.transactionId).filter(Boolean),
           description: items.length === 1 ? items[0].description : `${items[0].description} + ${items.length - 1} more item${items.length - 1 !== 1 ? 's' : ''}`,
           amount: total,

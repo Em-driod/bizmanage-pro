@@ -33,6 +33,7 @@ const NAV_GROUPS = [
     label: 'Sell',
     items: [
       { label: 'Catalog', path: '/products', icon: 'fa-box-open' },
+      { label: 'Profit', path: '/profit', icon: 'fa-sack-dollar' },
       { label: 'Proposals', path: '/proposals', icon: 'fa-file-signature' },
     ],
   },

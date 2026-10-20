@@ -323,10 +323,11 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                                 type="button"
                                                 onClick={() => {
                                                     const newItem = { description: p.name + (p.description ? ` — ${p.description}` : ''), quantity: 1, unitPrice: p.price, total: p.price, productId: p._id };
-                                                    if (activeLineIndex !== null) {
-                                                        // Fill the selected empty row
+                                                    if (activeLineIndex !== null && lineItems[activeLineIndex]) {
+                                                        // Fill the selected row, keeping any quantity already entered
+                                                        const quantity = lineItems[activeLineIndex].quantity || 1;
                                                         const updated = [...lineItems];
-                                                        updated[activeLineIndex] = newItem;
+                                                        updated[activeLineIndex] = { ...newItem, quantity, total: quantity * p.price };
                                                         setLineItems(updated);
                                                     } else {
                                                         setLineItems(prev => [...prev, newItem]);
@@ -411,6 +412,20 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                         </div>
                                         <span className="text-sm font-black text-indigo-600 shrink-0 text-right min-w-[4rem]">{formatCurrency(item.total)}</span>
                                     </div>
+                                    {/* Linked lines feed the product profit report; editing the description unlinks them. */}
+                                    {item.productId ? (
+                                        <p className="text-[10px] font-bold text-indigo-500">
+                                            <i className="fas fa-link mr-1"></i>From catalog — profit tracked
+                                        </p>
+                                    ) : item.description && products.length > 0 ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => { setActiveLineIndex(index); setShowCatalog(true); setCatalogSearch(''); }}
+                                            className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
+                                        >
+                                            <i className="fas fa-box-open mr-1"></i>Pick from catalog to track profit
+                                        </button>
+                                    ) : null}
                                 </div>
                             ))}
                         </div>

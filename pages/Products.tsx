@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../services/api';
+import { Link } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import QrScannerModal from '../components/QrScannerModal';
 
@@ -8,6 +9,7 @@ export interface Product {
   name: string;
   description?: string;
   price: number;
+  costPrice?: number | null;
   unit?: string;
   category?: string;
   image?: string;
@@ -25,6 +27,15 @@ const toBase64 = (file: File): Promise<string> =>
   });
 
 const CATEGORIES = ['Services', 'Products', 'Design', 'Development', 'Consulting', 'Other'];
+
+const hasCost = (p: Pick<Product, 'costPrice'>) => typeof p.costPrice === 'number';
+
+// Profit per unit and margin (as % of the selling price), or null when either side is missing.
+export const unitMargin = (price: number, cost: number | null | undefined) => {
+  if (typeof cost !== 'number' || !(price > 0)) return null;
+  const profit = price - cost;
+  return { profit, pct: (profit / price) * 100 };
+};
 
 const Products: React.FC = () => {
   const { formatCurrency } = useCurrency();
@@ -46,6 +57,7 @@ const Products: React.FC = () => {
     name: '',
     description: '',
     price: '',
+    costPrice: '',
     unit: '',
     category: '',
     image: '',
@@ -69,7 +81,7 @@ const Products: React.FC = () => {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ name: '', description: '', price: '', unit: '', category: '', image: '', trackStock: false, stock: '', showOnProfile: true });
+    setForm({ name: '', description: '', price: '', costPrice: '', unit: '', category: '', image: '', trackStock: false, stock: '', showOnProfile: true });
     setShowForm(true);
   };
 
@@ -79,6 +91,7 @@ const Products: React.FC = () => {
       name: p.name,
       description: p.description || '',
       price: String(p.price),
+      costPrice: hasCost(p) ? String(p.costPrice) : '',
       unit: p.unit && p.unit !== 'unit' ? p.unit : '',
       category: p.category || '',
       image: p.image || '',
@@ -100,8 +113,10 @@ const Products: React.FC = () => {
     if (!form.name.trim()) { showToast('Name is required'); return; }
     const price = parseFloat(form.price);
     if (isNaN(price) || price < 0) { showToast('Enter a valid price'); return; }
+    const costPrice = form.costPrice.trim() === '' ? null : parseFloat(form.costPrice);
+    if (costPrice !== null && (isNaN(costPrice) || costPrice < 0)) { showToast('Enter a valid cost price'); return; }
     const stock = form.stock !== '' ? (parseInt(form.stock, 10) || 0) : undefined;
-    const payload = { ...form, price, stock };
+    const payload = { ...form, price, costPrice, stock };
     setSaving(true);
     try {
       if (editingId) {
@@ -185,6 +200,15 @@ const Products: React.FC = () => {
           <p className="text-sm text-slate-400 mt-0.5">Your catalog — pick items directly when creating invoices or proposals</p>
         </div>
         <div className="flex items-center gap-2">
+          {products.length > 0 && (
+            <Link
+              to="/profit"
+              className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-bold px-4 py-2.5 rounded-xl transition-colors"
+            >
+              <i className="fas fa-sack-dollar text-xs text-emerald-500" />
+              Profit
+            </Link>
+          )}
           {products.length > 0 && (
             <button
               onClick={handlePrintCatalog}
@@ -306,9 +330,26 @@ const Products: React.FC = () => {
                 <p className="text-base font-bold text-slate-900 mt-2">{p.name}</p>
                 {p.description && <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{p.description}</p>}
                 <div className="flex items-center justify-between mt-3">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-lg font-black text-indigo-600">{formatCurrency(p.price)}</p>
                     {p.unit && p.unit !== 'unit' && <p className="text-[10px] text-slate-400">per {p.unit}</p>}
+                    {hasCost(p) ? (
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Cost {formatCurrency(p.costPrice as number)}
+                        {(() => {
+                          const m = unitMargin(p.price, p.costPrice);
+                          return m ? (
+                            <span className={`ml-1.5 font-bold ${m.profit < 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
+                              · {m.pct.toFixed(0)}% margin
+                            </span>
+                          ) : null;
+                        })()}
+                      </p>
+                    ) : (
+                      <button onClick={() => openEdit(p)} className="text-[11px] font-bold text-amber-600 hover:text-amber-700 mt-0.5">
+                        <i className="fas fa-circle-plus mr-1 text-[10px]" />Add cost price
+                      </button>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -416,10 +457,10 @@ const Products: React.FC = () => {
                 />
               </div>
 
-              {/* Price + Unit */}
+              {/* Selling price + cost price */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Price *</label>
+                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Selling Price *</label>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -433,16 +474,53 @@ const Products: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Sold Per</label>
+                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Cost Price</label>
                   <input
                     type="text"
-                    placeholder="50mls, bottle, hour…"
-                    value={form.unit}
-                    onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
+                    inputMode="decimal"
+                    placeholder="What it costs you"
+                    value={form.costPrice}
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (v === '' || /^\d*\.?\d*$/.test(v)) setForm(f => ({ ...f, costPrice: v }));
+                    }}
                     className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">What one unit is — a label, not a count</p>
                 </div>
+              </div>
+              {(() => {
+                const price = parseFloat(form.price);
+                const cost = form.costPrice.trim() === '' ? null : parseFloat(form.costPrice);
+                const m = unitMargin(price, cost === null || isNaN(cost) ? null : cost);
+                if (!m) {
+                  return (
+                    <p className="text-[11px] text-slate-400 -mt-2">
+                      <i className="fas fa-lock text-[9px] mr-1" />
+                      Private — never shown to customers. Used to work out your profit on every sale.
+                    </p>
+                  );
+                }
+                return (
+                  <div className={`-mt-2 flex items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-xs font-bold ${m.profit < 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
+                    <span>
+                      <i className={`fas ${m.profit < 0 ? 'fa-arrow-trend-down' : 'fa-arrow-trend-up'} mr-1.5`} />
+                      {m.profit < 0 ? 'Loss' : 'Profit'} of {formatCurrency(Math.abs(m.profit))} per {form.unit || 'unit'}
+                    </span>
+                    <span className="shrink-0">{m.pct.toFixed(1)}% margin</span>
+                  </div>
+                );
+              })()}
+
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Sold Per</label>
+                <input
+                  type="text"
+                  placeholder="50mls, bottle, hour…"
+                  value={form.unit}
+                  onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">What one unit is — a label, not a count</p>
               </div>
 
               {/* Stock tracking */}
