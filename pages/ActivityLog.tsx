@@ -182,8 +182,19 @@ const ActivityLog: React.FC = () => {
 
   const fetchStats = useCallback(async () => {
     try {
-      const data = await apiRequest<ActivityStats>(`/activity/stats?days=${statsDays}`);
-      setStats(data);
+      const data = await apiRequest<Partial<ActivityStats>>(`/activity/stats?days=${statsDays}`);
+      // Normalise so a partial response (older API) can't crash the render.
+      setStats({
+        resourceStats: data?.resourceStats || [],
+        actionStats: data?.actionStats || [],
+        userActivity: data?.userActivity || [],
+        daily: data?.daily || [],
+        sensitiveCount: data?.sensitiveCount ?? 0,
+        totalCount:
+          data?.totalCount ?? (data?.resourceStats || []).reduce((sum, r) => sum + (r.total || 0), 0),
+        period: data?.period || `${statsDays} days`,
+        days: data?.days ?? statsDays,
+      });
     } catch (err) {
       console.error('Failed to fetch activity stats:', err);
     }
@@ -242,7 +253,7 @@ const ActivityLog: React.FC = () => {
       const header = ['Timestamp', 'User', 'Email', 'Action', 'Resource', 'Severity', 'Summary', 'Resource ID', 'IP'];
       const body = rows.map((l) =>
         [
-          new Date(tsOf(l)).toISOString(),
+          tsOf(l) ? new Date(tsOf(l)).toISOString() : '',
           l.userName,
           l.userEmail,
           l.action,
@@ -499,7 +510,7 @@ const ActivityLog: React.FC = () => {
                 </div>
                 {items.map((log) => {
                   const am = ACTION_META[log.action] || { label: log.action, cls: 'text-slate-600 bg-slate-100', icon: 'fa-circle' };
-                  const rm = RESOURCE_META[log.resource] || { label: log.resource, icon: 'fa-circle' };
+                  const rm = RESOURCE_META[log.resource] || { label: log.resource || 'Item', icon: 'fa-circle' };
                   const open = expandedId === log._id;
                   const hasDetail =
                     (log.changes && log.changes.length > 0) ||
