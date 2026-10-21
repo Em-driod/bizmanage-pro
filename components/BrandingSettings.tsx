@@ -6,6 +6,7 @@ import { useBranding } from '../context/BrandingContext';
 import { useNotification } from '../context/NotificationContext';
 import { prepareLogo } from '../utils/logo';
 import BrandMark from './BrandMark';
+import { alpha, darken, isHex, readableOnDark } from '../utils/color';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981', '#0ea5e9', '#0f172a'];
 
@@ -30,6 +31,7 @@ const BrandingSettings: React.FC = () => {
   }, [branding.logoImage, branding.accentColor]);
 
   const dirty = logo !== branding.logoImage || color !== branding.accentColor;
+  const safeColor = isHex(color) ? color : '#6366f1';
 
   const handleFile = async (file?: File | null) => {
     if (!file) return;
@@ -220,13 +222,18 @@ const BrandingSettings: React.FC = () => {
 
           {/* Receipt header */}
           <div className="rounded-xl overflow-hidden bg-[#0f172a] shadow-sm">
-            <div className="px-4 py-4 flex items-center gap-3">
+            <div className="h-1" style={{ background: `linear-gradient(90deg, ${darken(safeColor, 0.15)}, ${color}, ${readableOnDark(safeColor)})` }} />
+            <div className="px-4 pt-4 pb-3 flex items-center gap-3">
               <BrandMark name={name} logo={logo} color={color} size={36} radius={10} />
               <div className="min-w-0">
                 <p className="text-[8px] font-black uppercase tracking-[2px] text-slate-500">Official receipt</p>
                 <p className="text-sm font-black text-white truncate">{name}</p>
               </div>
-              <span className="ml-auto text-[10px] font-black text-emerald-400 font-mono shrink-0">RCP-0001</span>
+              <span className="ml-auto text-[10px] font-black font-mono shrink-0" style={{ color: readableOnDark(safeColor) }}>RCP-0001</span>
+            </div>
+            <div className="mx-4 mb-4 rounded-lg px-3 py-2.5" style={{ background: `linear-gradient(135deg, ${darken(safeColor, 0.6)}, ${darken(safeColor, 0.45)})` }}>
+              <p className="text-[8px] font-black uppercase tracking-[2px]" style={{ color: alpha(readableOnDark(safeColor), 0.75) }}>Total amount received</p>
+              <p className="text-base font-black text-white">₦25,000</p>
             </div>
           </div>
 

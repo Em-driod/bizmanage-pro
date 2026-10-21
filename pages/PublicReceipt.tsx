@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../constants';
 import { toPng } from 'html-to-image';
 import BrandMark from '../components/BrandMark';
+import { alpha, brandOr, darken } from '../utils/color';
 
 interface ReceiptData {
   receiptNumber: string;
@@ -80,6 +81,9 @@ const PublicReceipt: React.FC = () => {
     }
   };
 
+  // The business's brand colour; receipts from before it was set stay green.
+  const brand = brandOr(business?.accentColor, '#059669');
+
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
@@ -104,7 +108,7 @@ const PublicReceipt: React.FC = () => {
           <button onClick={handleSaveImage} disabled={isDownloading} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 shadow-sm transition-all">
             <i className="fas fa-image text-xs"></i> {isDownloading ? 'Saving...' : 'Image'}
           </button>
-          <button onClick={handlePrint} className="flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 shadow-sm transition-all">
+          <button onClick={handlePrint} className="flex items-center gap-2 px-3 py-2 text-white rounded-xl text-xs font-bold hover:opacity-90 shadow-sm transition-all" style={{ background: brand }}>
             <i className="fas fa-file-pdf text-xs"></i> PDF
           </button>
         </div>
@@ -121,7 +125,7 @@ const PublicReceipt: React.FC = () => {
         </div>
 
         {/* Header */}
-        <div className="bg-gradient-to-br from-emerald-600 to-emerald-500 px-8 py-8">
+        <div className="px-8 py-8" style={{ background: `linear-gradient(135deg, ${darken(brand, 0.1)}, ${brand})` }}>
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4 min-w-0">
               <BrandMark
@@ -132,23 +136,23 @@ const PublicReceipt: React.FC = () => {
                 radius={16}
               />
               <div className="min-w-0">
-              <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1">Receipt from</p>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Receipt from</p>
               <h1 className="text-2xl font-black text-white">{business?.name}</h1>
-              {business?.email && <p className="text-sm text-emerald-100 mt-1">{business.email}</p>}
-              {business?.phone && <p className="text-sm text-emerald-100">{business.phone}</p>}
+              {business?.email && <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.85)' }}>{business.email}</p>}
+              {business?.phone && <p className="text-sm" style={{ color: 'rgba(255,255,255,0.85)' }}>{business.phone}</p>}
               </div>
             </div>
             <div className="bg-white/20 rounded-xl px-4 py-3 text-right">
-              <p className="text-[10px] font-black text-emerald-200 uppercase tracking-widest">Receipt No.</p>
+              <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.7)' }}>Receipt No.</p>
               <p className="text-xl font-black text-white mt-1">{receipt.receiptNumber}</p>
             </div>
           </div>
         </div>
 
         {/* Amount highlight */}
-        <div className="bg-emerald-50 border-b border-emerald-100 px-8 py-6 text-center">
-          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Amount Received</p>
-          <p className="text-4xl font-black text-emerald-700">{formatAmount(receipt.amount, receipt.currency)}</p>
+        <div className="px-8 py-6 text-center" style={{ background: alpha(brand, 0.07), borderBottom: `1px solid ${alpha(brand, 0.15)}` }}>
+          <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: brand }}>Amount Received</p>
+          <p className="text-4xl font-black" style={{ color: darken(brand, 0.15) }}>{formatAmount(receipt.amount, receipt.currency)}</p>
         </div>
 
         {/* Details */}

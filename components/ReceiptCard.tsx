@@ -6,6 +6,7 @@ import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
 import { useBranding } from '../context/BrandingContext';
 import BrandMark from './BrandMark';
+import { alpha, brandOr, darken, readableOnDark } from '../utils/color';
 
 export interface ReceiptData {
   _id: string;
@@ -36,6 +37,9 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
   const { formatCurrency } = useCurrency();
   const { branding } = useBranding();
   const name = businessName || branding.name;
+  // Brand colour on the receipt; a light variant where it sits on the dark card.
+  const brand = brandOr(branding.accentColor);
+  const brandOnDark = readableOnDark(brand);
   const [isSharing, setIsSharing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -123,7 +127,7 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
       {/* Hidden receipt card for image capture */}
       <div style={{ position: 'absolute', left: '-9999px', top: 0, width: '460px' }} aria-hidden="true">
         <div ref={cardRef} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#0f172a', width: '460px', padding: '0', position: 'relative' }}>
-          <div style={{ height: '5px', background: 'linear-gradient(90deg, #059669, #10b981, #34d399)' }} />
+          <div style={{ height: '5px', background: `linear-gradient(90deg, ${darken(brand, 0.15)}, ${brand}, ${brandOnDark})` }} />
 
           {/* Ink stamp */}
           <div style={{
@@ -148,20 +152,20 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ margin: '0 0 4px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: '#475569' }}>Receipt No.</p>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 900, color: '#34d399', letterSpacing: '0.5px', fontFamily: 'monospace' }}>{receipt.receiptNumber}</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 900, color: brandOnDark, letterSpacing: '0.5px', fontFamily: 'monospace' }}>{receipt.receiptNumber}</p>
               </div>
             </div>
           </div>
 
-          <div style={{ margin: '0 36px 22px', background: 'linear-gradient(135deg, #064e3b, #065f46)', borderRadius: '16px', padding: '22px 28px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(52,211,153,0.1)' }} />
-            <p style={{ margin: '0 0 6px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: 'rgba(52,211,153,0.7)' }}>Total Amount Received</p>
+          <div style={{ margin: '0 36px 22px', background: `linear-gradient(135deg, ${darken(brand, 0.6)}, ${darken(brand, 0.45)})`, borderRadius: '16px', padding: '22px 28px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: alpha(brandOnDark, 0.1) }} />
+            <p style={{ margin: '0 0 6px', fontSize: '9px', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', color: alpha(brandOnDark, 0.75) }}>Total Amount Received</p>
             <p style={{ margin: 0, fontSize: '34px', fontWeight: 900, color: '#ffffff', letterSpacing: '-1px', lineHeight: 1 }}>{formatCurrency(receipt.amount)}</p>
             <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ color: '#fff', fontSize: '10px', fontWeight: 900 }}>✓</span>
               </div>
-              <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'rgba(52,211,153,0.8)' }}>Payment Confirmed</p>
+              <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: alpha(brandOnDark, 0.85) }}>Payment Confirmed</p>
             </div>
           </div>
 
@@ -359,7 +363,7 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
         <div className="flex items-center gap-4">
           {branding.logoImage && <BrandMark name={name} logo={branding.logoImage} size={64} radius={14} />}
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-emerald-700 mb-1">{name}</h1>
+            <h1 className="text-3xl font-black tracking-tight mb-1" style={{ color: brand }}>{name}</h1>
             <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Official Receipt</p>
           </div>
         </div>
@@ -410,7 +414,7 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
       <div className="flex justify-end mb-12">
         <div className="w-64 pt-3 border-t-2 border-slate-900 flex justify-between items-center">
           <span className="text-base font-black text-slate-900 uppercase tracking-tighter">Total</span>
-          <span className="text-xl font-black text-emerald-700">{formatCurrency(receipt.amount)}</span>
+          <span className="text-xl font-black" style={{ color: brand }}>{formatCurrency(receipt.amount)}</span>
         </div>
       </div>
 
