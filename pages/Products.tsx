@@ -12,6 +12,7 @@ export interface Product {
   costPrice?: number | null;
   unit?: string;
   category?: string;
+  subcategory?: string;
   image?: string;
   trackStock?: boolean;
   stock?: number;
@@ -26,7 +27,12 @@ const toBase64 = (file: File): Promise<string> =>
     r.readAsDataURL(file);
   });
 
-const CATEGORIES = ['Services', 'Products', 'Design', 'Development', 'Consulting', 'Other'];
+// Offered only until the business has categories of its own.
+const STARTER_CATEGORIES = ['Food', 'Drinks', 'Fashion', 'Beauty', 'Electronics', 'Services'];
+
+const sameLabel = (a?: string, b?: string) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+export const categoryLabel = (p: { category?: string; subcategory?: string }) =>
+  [p.category, p.subcategory].filter(Boolean).join(' › ');
 
 const hasCost = (p: Pick<Product, 'costPrice'>) => typeof p.costPrice === 'number';
 
@@ -47,6 +53,9 @@ const Products: React.FC = () => {
   const [toast, setToast] = useState('');
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
+  const [filterSub, setFilterSub] = useState('');
+  const [showManage, setShowManage] = useState(false);
+  const [renaming, setRenaming] = useState<{ category: string; subcategory?: string; value: string } | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [attentionOnly, setAttentionOnly] = useState(false);
   const [stockFixId, setStockFixId] = useState<string | null>(null);
@@ -60,6 +69,7 @@ const Products: React.FC = () => {
     costPrice: '',
     unit: '',
     category: '',
+    subcategory: '',
     image: '',
     trackStock: false,
     stock: '',
@@ -81,7 +91,8 @@ const Products: React.FC = () => {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ name: '', description: '', price: '', costPrice: '', unit: '', category: '', image: '', trackStock: false, stock: '', showOnProfile: true });
+    // Adding while browsing a category starts the item in that category.
+    setForm({ name: '', description: '', price: '', costPrice: '', unit: '', category: filterCat, subcategory: filterSub, image: '', trackStock: false, stock: '', showOnProfile: true });
     setShowForm(true);
   };
 
@@ -94,6 +105,7 @@ const Products: React.FC = () => {
       costPrice: hasCost(p) ? String(p.costPrice) : '',
       unit: p.unit && p.unit !== 'unit' ? p.unit : '',
       category: p.category || '',
+      subcategory: p.subcategory || '',
       image: p.image || '',
       trackStock: !!p.trackStock,
       stock: p.stock != null ? String(p.stock) : '',
@@ -167,14 +179,57 @@ const Products: React.FC = () => {
 
   const handlePrintCatalog = () => window.print();
 
-  const categories = [...new Set(products.map(p => p.category).filter(Boolean))] as string[];
+  // Category tree from the products themselves, case-insensitively merged.
+  const tree = (() => {
+    const map = new Map<string, { name: string; count: number; subs: Map<string, { name: string; count: number }> }>();
+    for (const p of products) {
+      if (!p.category) continue;
+      const key = p.category.trim().toLowerCase();
+      const node = map.get(key) ?? { name: p.category.trim(), count: 0, subs: new Map() };
+      node.count += 1;
+      if (p.subcategory) {
+        const sk = p.subcategory.trim().toLowerCase();
+        const sub = node.subs.get(sk) ?? { name: p.subcategory.trim(), count: 0 };
+        sub.count += 1;
+        node.subs.set(sk, sub);
+      }
+      map.set(key, node);
+    }
+    return [...map.values()]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(n => ({ ...n, subs: [...n.subs.values()].sort((a, b) => a.name.localeCompare(b.name)) }));
+  })();
+  const categories = tree.map(c => c.name);
+  const activeNode = tree.find(c => sameLabel(c.name, filterCat));
+  const uncategorised = products.filter(p => !p.category).length;
+  const formNode = tree.find(c => sameLabel(c.name, form.category));
+
+  const saveRename = async () => {
+    if (!renaming || !renaming.value.trim()) return;
+    try {
+      const res = await apiRequest<{ updated: number }>('/products/categories/rename', {
+        method: 'POST',
+        body: { category: renaming.category, subcategory: renaming.subcategory, newName: renaming.value },
+      });
+      showToast(`Renamed on ${res.updated} item${res.updated === 1 ? '' : 's'}`);
+      if (sameLabel(filterCat, renaming.category)) {
+        if (renaming.subcategory) { if (sameLabel(filterSub, renaming.subcategory)) setFilterSub(renaming.value.trim()); }
+        else setFilterCat(renaming.value.trim());
+      }
+      setRenaming(null);
+      fetchProducts();
+    } catch (err: any) {
+      showToast(err.message || 'Could not rename');
+    }
+  };
   const attentionCount = products.filter(p => p.trackStock && (p.stock ?? 0) <= 0).length;
 
   const filtered = products.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase());
-    const matchCat = !filterCat || p.category === filterCat;
+    const matchCat = !filterCat || (filterCat === '__none' ? !p.category : sameLabel(p.category, filterCat));
+    const matchSub = !filterSub || sameLabel(p.subcategory, filterSub);
     const matchAttention = !attentionOnly || (p.trackStock && (p.stock ?? 0) <= 0);
-    return matchSearch && matchCat && matchAttention;
+    return matchSearch && matchCat && matchSub && matchAttention;
   });
 
   if (loading) {
@@ -249,16 +304,6 @@ const Products: React.FC = () => {
           >
             <i className="fas fa-qrcode text-indigo-500" /> Scan
           </button>
-          {categories.length > 0 && (
-            <select
-              value={filterCat}
-              onChange={e => setFilterCat(e.target.value)}
-              className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            >
-              <option value="">All categories</option>
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          )}
           {attentionCount > 0 && (
             <button
               type="button"
@@ -270,6 +315,56 @@ const Products: React.FC = () => {
               <i className="fas fa-triangle-exclamation text-xs" />
               Needs attention ({attentionCount})
             </button>
+          )}
+        </div>
+      )}
+
+      {/* Category browser */}
+      {categories.length > 0 && (
+        <div className="space-y-2 print:hidden">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            {[{ key: '', label: 'All', count: products.length }, ...tree.map(c => ({ key: c.name, label: c.name, count: c.count })), ...(uncategorised ? [{ key: '__none', label: 'No category', count: uncategorised }] : [])].map(c => {
+              const active = c.key === '' ? !filterCat : c.key === '__none' ? filterCat === '__none' : sameLabel(filterCat, c.key);
+              return (
+                <button
+                  key={c.key || 'all'}
+                  onClick={() => { setFilterCat(c.key); setFilterSub(''); }}
+                  className={`shrink-0 h-9 px-3.5 rounded-xl text-xs font-bold transition-colors ${
+                    active ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {c.label}
+                  <span className={`ml-1.5 ${active ? 'text-white/50' : 'text-slate-300'}`}>{c.count}</span>
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setShowManage(true)}
+              className="shrink-0 h-9 px-3 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-700"
+              title="Rename categories"
+            >
+              <i className="fas fa-sliders mr-1.5 text-[10px]" />Manage
+            </button>
+          </div>
+          {activeNode && activeNode.subs.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pl-1">
+              <i className="fas fa-turn-up rotate-90 text-[10px] text-slate-300 mr-1" />
+              {[{ name: '', count: activeNode.count }, ...activeNode.subs].map(sc => {
+                const active = sc.name === '' ? !filterSub : sameLabel(filterSub, sc.name);
+                return (
+                  <button
+                    key={sc.name || 'all'}
+                    onClick={() => setFilterSub(sc.name)}
+                    className={`shrink-0 h-8 px-3 rounded-lg text-[11px] font-bold transition-colors ${
+                      active ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                    }`}
+                  >
+                    {sc.name || `All ${activeNode.name}`}
+                    <span className={`ml-1 ${active ? 'text-white/60' : 'text-indigo-300'}`}>{sc.count}</span>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
@@ -311,7 +406,7 @@ const Products: React.FC = () => {
                 <div className="flex items-center gap-2 flex-wrap">
                   {p.category && (
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">
-                      {p.category}
+                      {categoryLabel(p)}
                     </span>
                   )}
                   {p.trackStock && (
@@ -391,7 +486,7 @@ const Products: React.FC = () => {
                   <p className="font-semibold">{p.name}</p>
                   {p.description && <p className="text-xs text-slate-500">{p.description}</p>}
                 </td>
-                <td className="py-2 pr-4">{p.category || '—'}</td>
+                <td className="py-2 pr-4">{categoryLabel(p) || '—'}</td>
                 <td className="py-2 pr-4">{formatCurrency(p.price)}{p.unit && p.unit !== 'unit' ? ` / ${p.unit}` : ''}</td>
                 <td className="py-2 pr-4">{p.trackStock ? p.stock : '—'}</td>
               </tr>
@@ -574,24 +669,64 @@ const Products: React.FC = () => {
                 </label>
               </div>
 
-              {/* Category */}
-              <div>
-                <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Category</label>
-                <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setForm(f => ({ ...f, category: f.category === cat ? '' : cat }))}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
-                        form.category === cat
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+              {/* Category + sub-category */}
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Category</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Drinks"
+                    maxLength={60}
+                    value={form.category}
+                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    className="w-full border border-slate-200 bg-white rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {(categories.length ? categories : STARTER_CATEGORIES).map(cat => (
+                      <button
+                        type="button"
+                        key={cat}
+                        onClick={() => setForm(f => ({ ...f, category: sameLabel(f.category, cat) ? '' : cat, subcategory: sameLabel(f.category, cat) ? f.subcategory : '' }))}
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors ${
+                          sameLabel(form.category, cat) ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-100'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                <div className={form.category.trim() ? '' : 'opacity-50 pointer-events-none'}>
+                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">
+                    Sub-category <span className="normal-case tracking-normal font-semibold text-slate-400">optional</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={form.category.trim() ? `e.g. a type of ${form.category.trim().toLowerCase()}` : 'Choose a category first'}
+                    maxLength={60}
+                    value={form.subcategory}
+                    onChange={e => setForm(f => ({ ...f, subcategory: e.target.value }))}
+                    className="w-full border border-slate-200 bg-white rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  {formNode && formNode.subs.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {formNode.subs.map(sc => (
+                        <button
+                          type="button"
+                          key={sc.name}
+                          onClick={() => setForm(f => ({ ...f, subcategory: sameLabel(f.subcategory, sc.name) ? '' : sc.name }))}
+                          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors ${
+                            sameLabel(form.subcategory, sc.name) ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-100'
+                          }`}
+                        >
+                          {sc.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400">Your public page groups items by these, so customers can browse.</p>
               </div>
             </div>
 
@@ -616,6 +751,63 @@ const Products: React.FC = () => {
         }}
         title="Scan Product Barcode / QR"
       />
+
+      {/* Manage categories */}
+      {showManage && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm" onClick={() => { setShowManage(false); setRenaming(null); }}>
+          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[85dvh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Categories</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Renaming updates every item in it.</p>
+              </div>
+              <button onClick={() => { setShowManage(false); setRenaming(null); }} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100">
+                <i className="fas fa-times" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {tree.map(c => (
+                <div key={c.name} className="rounded-xl border border-slate-100">
+                  {[{ sub: undefined as string | undefined, name: c.name, count: c.count }, ...c.subs.map(sc => ({ sub: sc.name, name: sc.name, count: sc.count }))].map(row => {
+                    const editing = renaming && sameLabel(renaming.category, c.name) && (renaming.subcategory || '') === (row.sub || '');
+                    return (
+                      <div key={row.sub ?? '__cat'} className={`flex items-center gap-2 px-3 py-2.5 ${row.sub ? 'pl-8 border-t border-slate-50' : ''}`}>
+                        {editing ? (
+                          <>
+                            <input
+                              autoFocus
+                              value={renaming!.value}
+                              onChange={e => setRenaming(r => r && { ...r, value: e.target.value })}
+                              onKeyDown={e => { if (e.key === 'Enter') saveRename(); if (e.key === 'Escape') setRenaming(null); }}
+                              className="flex-1 min-w-0 border border-indigo-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            />
+                            <button onClick={saveRename} className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold">Save</button>
+                          </>
+                        ) : (
+                          <>
+                            <span className={`flex-1 min-w-0 truncate text-sm ${row.sub ? 'text-slate-600' : 'font-bold text-slate-900'}`}>{row.name}</span>
+                            <span className="text-[11px] text-slate-300">{row.count}</span>
+                            <button
+                              onClick={() => setRenaming({ category: c.name, subcategory: row.sub, value: row.name })}
+                              className="w-7 h-7 rounded-lg text-slate-300 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center"
+                              title="Rename"
+                            >
+                              <i className="fas fa-pen text-[10px]" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              <p className="text-[11px] text-slate-400 px-1 pt-1">
+                To move one item to another category, edit that item. Giving two categories the same name merges them.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stock correction modal */}
       {stockFixId && (

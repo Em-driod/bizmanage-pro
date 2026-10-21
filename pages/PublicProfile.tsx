@@ -3,8 +3,9 @@ import { useParams } from 'react-router-dom';
 import { motion, useScroll, useSpring, useMotionValue, useInView } from 'framer-motion';
 import { API_BASE_URL } from '../constants';
 import StoreCheckout, { type CartProduct } from '../components/StoreCheckout';
+import PublicCatalog from '../components/PublicCatalog';
 
-interface ServiceItem { productId?: string; name: string; description?: string; price?: number; image?: string; inStock?: number; }
+interface ServiceItem { productId?: string; name: string; description?: string; price?: number; image?: string; inStock?: number; category?: string; subcategory?: string; }
 
 interface ProfileData {
   name: string;
@@ -302,7 +303,7 @@ const PublicProfile: React.FC = () => {
   ].filter(Boolean) as [string, string | null, boolean][];
 
   return (
-    <div className="bg-[#FAFAFA] text-slate-900 overflow-x-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="bg-[#FAFAFA] text-slate-900" style={{ fontFamily: "'Inter', system-ui, sans-serif", overflowX: 'clip' }}>
       <ScrollProgress accent={accent} />
       <MagneticCursor accent={accent} />
 
@@ -581,128 +582,16 @@ const PublicProfile: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {profile.services.map((svc, i) => {
-                const soldOut = svc.inStock !== undefined && svc.inStock <= 0;
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 50 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-60px' }}
-                    transition={{ delay: (i % 4) * 0.08, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    <TiltCard intensity={6} className="group relative rounded-2xl overflow-hidden border border-slate-100 bg-white hover:shadow-2xl hover:shadow-slate-200/60 transition-shadow duration-500 cursor-default">
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        whileHover={{ opacity: 1 }}
-                        transition={{ duration: 0.35 }}
-                        className="absolute inset-0 pointer-events-none"
-                        style={{ background: `radial-gradient(ellipse 60% 60% at 30% 40%, ${accent}0d, transparent)` }}
-                      />
-                      <motion.div
-                        initial={{ scaleX: 0 }}
-                        whileInView={{ scaleX: 1 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: i * 0.06 + 0.2, duration: 0.6 }}
-                        style={{ originX: 0, background: soldOut ? '#E11D48' : accent }}
-                        className="absolute top-0 left-0 right-0 h-0.5"
-                      />
-
-                      {svc.image ? (
-                        <div className="relative h-44 overflow-hidden">
-                          <img src={svc.image} alt={svc.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                        </div>
-                      ) : null}
-
-                      <div className={`relative flex flex-col p-7 md:p-8 ${svc.image ? '' : 'min-h-[200px]'}`}>
-                        <div className="flex items-start justify-between mb-auto gap-4">
-                          <div className="min-w-0">
-                            {!svc.image && (
-                              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: accent + '15' }}>
-                                <i className="fas fa-box text-sm" style={{ color: accent }} />
-                              </div>
-                            )}
-                            <h3 style={{ fontSize: 'clamp(1.1rem, 2vw, 1.5rem)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', color: '#0F172A', lineHeight: 1.05 }}>
-                              {svc.name}
-                            </h3>
-                          </div>
-                          {svc.price !== undefined && (
-                            <div className="text-right flex-shrink-0">
-                              <div style={{ fontSize: 'clamp(1.1rem, 2.4vw, 1.6rem)', fontWeight: 900, color: accent, letterSpacing: '-0.03em', lineHeight: 1 }}>{fmt(svc.price)}</div>
-                              {svc.inStock !== undefined && (
-                                <span className="inline-block mt-1 text-[10px] font-black uppercase tracking-wide" style={{ color: soldOut ? '#E11D48' : '#059669' }}>
-                                  {soldOut ? 'Sold out' : `${svc.inStock} left`}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {svc.description && (
-                          <p style={{ fontSize: 13, lineHeight: 1.6, color: '#64748B', fontWeight: 500, marginTop: 14 }}>
-                            {svc.description}
-                          </p>
-                        )}
-
-                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
-                          <span style={{ fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.4em', color: '#CBD5E1' }}>Item {String(i + 1).padStart(2, '0')}</span>
-                          {orderingOn && svc.productId && svc.price !== undefined ? (
-                            soldOut ? (
-                              <span className="text-[11px] font-black uppercase text-rose-500">Sold out</span>
-                            ) : (cart[svc.productId] ?? 0) > 0 ? (
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  onClick={() => setQty(svc.productId!, (cart[svc.productId!] ?? 0) - 1)}
-                                  className="w-8 h-8 rounded-full border flex items-center justify-center"
-                                  style={{ borderColor: accent + '40', color: accent }}
-                                  aria-label={`One less ${svc.name}`}
-                                >
-                                  <i className="fas fa-minus text-[10px]" />
-                                </button>
-                                <span className="w-6 text-center text-sm font-black text-slate-900">{cart[svc.productId]}</span>
-                                <button
-                                  onClick={() => setQty(svc.productId!, (cart[svc.productId!] ?? 0) + 1)}
-                                  disabled={svc.inStock !== undefined && (cart[svc.productId] ?? 0) >= svc.inStock}
-                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white disabled:opacity-30"
-                                  style={{ background: accent }}
-                                  aria-label={`One more ${svc.name}`}
-                                >
-                                  <i className="fas fa-plus text-[10px]" />
-                                </button>
-                              </div>
-                            ) : (
-                              <motion.button
-                                whileHover={{ scale: 1.04 }}
-                                whileTap={{ scale: 0.96 }}
-                                onClick={() => setQty(svc.productId!, 1)}
-                                className="h-9 px-4 rounded-full text-white text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5"
-                                style={{ background: accent }}
-                              >
-                                <i className="fas fa-plus text-[9px]" /> Add
-                              </motion.button>
-                            )
-                          ) : waLink && (
-                            <motion.a
-                              href={`https://wa.me/${profile.whatsapp!.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${data.name}! I'm interested in "${svc.name}".`)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              whileHover={{ x: 4 }}
-                              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                              className="w-8 h-8 rounded-full flex items-center justify-center border flex-shrink-0"
-                              style={{ borderColor: accent + '40', color: accent }}
-                            >
-                              <i className="fab fa-whatsapp text-xs" />
-                            </motion.a>
-                          )}
-                        </div>
-                      </div>
-                    </TiltCard>
-                  </motion.div>
-                );
-              })}
-            </div>
+            <PublicCatalog
+              items={profile.services}
+              accent={accent}
+              fmt={fmt}
+              orderingOn={orderingOn}
+              cart={cart}
+              setQty={setQty}
+              whatsapp={profile.whatsapp}
+              businessName={data.name}
+            />
           </div>
         </section>
       )}
