@@ -6,6 +6,7 @@ import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import OrderPaymentSetup, { type PaymentSettings } from '../components/OrderPaymentSetup';
 import { useBranding } from '../context/BrandingContext';
+import ScrollRow from '../components/ScrollRow';
 
 type Status = 'pending_payment' | 'paid' | 'fulfilled' | 'cancelled';
 type Stage = 'placed' | 'paid' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled';
@@ -279,10 +280,11 @@ const Orders: React.FC = () => {
         )}
       </div>
 
-      <div className="inline-flex max-w-full gap-1 rounded-xl bg-slate-100 p-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+      <ScrollRow wrapperClassName="inline-block max-w-full" className="flex gap-1 rounded-xl bg-slate-100 p-1" fade="#f1f5f9" activeKey={tab}>
         {TABS.map((t) => (
           <button
             key={t.id}
+            data-active={tab === t.id}
             onClick={() => setTab(t.id)}
             className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold whitespace-nowrap transition-colors ${
               tab === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
@@ -292,7 +294,7 @@ const Orders: React.FC = () => {
             {t.badge ? <span className="ml-2 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black">{t.badge}</span> : null}
           </button>
         ))}
-      </div>
+      </ScrollRow>
 
       {tab === 'setup' && settings && <OrderPaymentSetup settings={settings} onChange={setSettings} />}
 
@@ -311,10 +313,11 @@ const Orders: React.FC = () => {
           )}
 
           <div className="flex flex-col md:flex-row gap-2">
-            <div className="flex gap-1 overflow-x-auto">
+            <ScrollRow wrapperClassName="min-w-0" className="flex gap-1" fade="#FDFDFD" activeKey={status}>
               {([['pending_payment', 'Awaiting payment'], ['paid', 'Paid'], ['fulfilled', 'Fulfilled'], ['cancelled', 'Cancelled'], ['', 'All']] as [Status | '', string][]).map(([s, label]) => (
                 <button
                   key={s || 'all'}
+                  data-active={status === s}
                   onClick={() => setStatus(s)}
                   className={`h-9 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
                     status === s ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'
@@ -324,7 +327,7 @@ const Orders: React.FC = () => {
                   <span className={`ml-1.5 ${status === s ? 'text-white/60' : 'text-slate-300'}`}>{s ? counts[s] : totalCount}</span>
                 </button>
               ))}
-            </div>
+            </ScrollRow>
             <div className="relative md:ml-auto md:w-64">
               <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs" />
               <input

@@ -5,6 +5,7 @@ import { CurrencyProvider } from './context/CurrencyContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { PrintProvider } from './context/PrintContext';
 import { BrandingProvider } from './context/BrandingContext';
+import { TourProvider } from './components/tour/TourProvider';
 import { SocketProvider } from './context/SocketContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
@@ -125,10 +126,12 @@ const App: React.FC = () => {
           <PrintProvider>
             <SocketProvider>
               <Router>
-                <CommandPalette />
-                <ErrorBoundary>
-                  <AppRoutes />
-                </ErrorBoundary>
+                <TourProvider>
+                  <CommandPalette />
+                  <ErrorBoundary>
+                    <AppRoutes />
+                  </ErrorBoundary>
+                </TourProvider>
               </Router>
               <ToastContainer />
             </SocketProvider>

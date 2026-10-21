@@ -3,6 +3,7 @@ import { apiRequest } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useCurrency } from '../context/CurrencyContext';
 import QrScannerModal from '../components/QrScannerModal';
+import ScrollRow from '../components/ScrollRow';
 
 export interface Product {
   _id: string;
@@ -322,12 +323,13 @@ const Products: React.FC = () => {
       {/* Category browser */}
       {categories.length > 0 && (
         <div className="space-y-2 print:hidden">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+          <ScrollRow className="flex items-center gap-1.5 pb-1" fade="#FDFDFD" activeKey={filterCat}>
             {[{ key: '', label: 'All', count: products.length }, ...tree.map(c => ({ key: c.name, label: c.name, count: c.count })), ...(uncategorised ? [{ key: '__none', label: 'No category', count: uncategorised }] : [])].map(c => {
               const active = c.key === '' ? !filterCat : c.key === '__none' ? filterCat === '__none' : sameLabel(filterCat, c.key);
               return (
                 <button
                   key={c.key || 'all'}
+                  data-active={active}
                   onClick={() => { setFilterCat(c.key); setFilterSub(''); }}
                   className={`shrink-0 h-9 px-3.5 rounded-xl text-xs font-bold transition-colors ${
                     active ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -345,15 +347,16 @@ const Products: React.FC = () => {
             >
               <i className="fas fa-sliders mr-1.5 text-[10px]" />Manage
             </button>
-          </div>
+          </ScrollRow>
           {activeNode && activeNode.subs.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto pl-1">
+            <ScrollRow className="flex items-center gap-1.5 pl-1" fade="#FDFDFD" activeKey={filterSub}>
               <i className="fas fa-turn-up rotate-90 text-[10px] text-slate-300 mr-1" />
               {[{ name: '', count: activeNode.count }, ...activeNode.subs].map(sc => {
                 const active = sc.name === '' ? !filterSub : sameLabel(filterSub, sc.name);
                 return (
                   <button
                     key={sc.name || 'all'}
+                    data-active={active}
                     onClick={() => setFilterSub(sc.name)}
                     className={`shrink-0 h-8 px-3 rounded-lg text-[11px] font-bold transition-colors ${
                       active ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
@@ -364,7 +367,7 @@ const Products: React.FC = () => {
                   </button>
                 );
               })}
-            </div>
+            </ScrollRow>
           )}
         </div>
       )}

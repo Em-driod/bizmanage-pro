@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../constants';
 import { toPng } from 'html-to-image';
 import BrandMark from '../components/BrandMark';
+import ScrollRow from '../components/ScrollRow';
 
 interface LineItem {
   description: string;
@@ -251,7 +252,7 @@ const PublicInvoice: React.FC = () => {
             </div>
 
             {/* Line Items */}
-            <div className="rounded-2xl border border-slate-100 overflow-x-auto mb-6">
+            <ScrollRow wrapperClassName="mb-6" className="rounded-2xl border border-slate-100">
               <table className="w-full min-w-[400px]">
                 <thead>
                   <tr className="bg-slate-50">
@@ -272,7 +273,7 @@ const PublicInvoice: React.FC = () => {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRow>
 
             {/* Totals */}
             <div className="flex justify-end mb-6">

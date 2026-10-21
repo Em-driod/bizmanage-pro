@@ -6,7 +6,9 @@ import { apiRequest } from '../services/api';
 import { usePrint } from '../context/PrintContext';
 import ReceiptPrint from './ReceiptPrint';
 import BrandMark from './BrandMark';
+import ScrollRow from './ScrollRow';
 import { useBranding } from '../context/BrandingContext';
+import { useTour } from './tour/TourProvider';
 import SearchModal from './SearchModal';
 
 // Lazy: pulls in the heavy html5-qrcode camera library, only needed once someone opens the scanner.
@@ -91,6 +93,7 @@ const BOTTOM_NAV = [
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, isAdmin } = useAuth();
   const { branding, loaded } = useBranding();
+  const tour = useTour();
   const { printData } = usePrint();
   const navigate = useNavigate();
   const location = useLocation();
@@ -209,7 +212,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 bottom-16 lg:bottom-0 left-0 z-40 w-64 bg-white border-r border-slate-100 transition-transform lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside data-tour="sidebar" className={`fixed top-0 bottom-16 lg:bottom-0 left-0 z-40 w-64 bg-white border-r border-slate-100 transition-transform lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <style>{`
           .sidebar-nav::-webkit-scrollbar { width: 4px; }
           .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
@@ -218,7 +221,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="flex flex-col h-full">
           {/* Business brand — the user's own logo and name, linking to settings */}
           <div className="px-4 py-4 flex-shrink-0 border-b border-slate-50">
-            <Link to="/business" className="flex items-center gap-3 min-w-0 group" title="Business settings">
+            <Link to="/business" data-tour="brand" className="flex items-center gap-3 min-w-0 group" title="Business settings">
               <BrandMark name={branding.name} logo={branding.logoImage} color={branding.accentColor} size={40} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-black text-slate-900 truncate leading-tight group-hover:text-indigo-600 transition-colors">
@@ -238,7 +241,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           {/* Nav */}
           <div className="flex-1 overflow-y-auto min-h-0 sidebar-nav">
             <nav className="px-3 py-3">
-              <div className="space-y-0.5">
+              <div className="space-y-0.5" data-tour="nav-primary">
                 {PRIMARY_NAV.map(item => (
                   <Link key={item.path} to={item.path} onClick={() => setIsSidebarOpen(false)} className={navLinkCls(location.pathname === item.path)}>
                     <i className={`fas ${item.icon} w-4 text-[13px] flex-shrink-0`}></i>
@@ -247,7 +250,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 ))}
               </div>
 
-              <div className="mt-3 pt-3 border-t border-slate-100 space-y-0.5">
+              <div className="mt-3 pt-3 border-t border-slate-100 space-y-0.5" data-tour="nav-sections">
                 {groupsWithAdmin.map(group => (
                   <Link
                     key={group.label}
@@ -302,10 +305,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       {/* Main */}
       <main className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-clip">
-        <header className="px-4 sm:px-6 lg:px-10 py-4 flex items-center justify-between border-b border-slate-50 bg-white/80 backdrop-blur-sm sticky top-0 z-30">
+        <header data-tour="header" className="px-4 sm:px-6 lg:px-10 py-4 flex items-center justify-between border-b border-slate-50 bg-white/80 backdrop-blur-sm sticky top-0 z-30">
           <div className="flex items-center gap-3">
             {/* Mobile hamburger */}
             <button
+              data-tour="menu"
+              aria-label="Open menu"
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 transition-colors"
             >
@@ -321,15 +326,29 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
           <div className="flex items-center gap-2">
             <button
+              data-tour="help"
+              onClick={() => tour.start({ manual: true })}
+              disabled={tour.running}
+              className="w-9 h-9 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all disabled:opacity-40"
+              title={tour.hasTour ? 'Show me around this page' : 'Show me around'}
+              aria-label="Show me around this page"
+            >
+              <i className="far fa-circle-question text-sm"></i>
+            </button>
+            <button
+              data-tour="search"
               onClick={() => setIsSearchOpen(true)}
               className="w-9 h-9 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all"
               title="Search (S)"
+              aria-label="Search"
             >
               <i className="fas fa-magnifying-glass text-sm"></i>
             </button>
             <div className="hidden sm:block"><CurrencySelector /></div>
             <div className="relative" ref={notificationRef}>
               <button
+                data-tour="notifications"
+                aria-label="Notifications"
                 onClick={() => setIsNotificationsOpen(prev => !prev)}
                 className="w-9 h-9 border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all relative"
               >
@@ -372,38 +391,48 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </div>
         </header>
 
-        <div className="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10 max-w-7xl mx-auto w-full pb-24 lg:pb-10">
+        <div data-tour="main" className="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10 max-w-7xl mx-auto w-full pb-24 lg:pb-10">
           {activeSection && (
-            <div className="-mt-2 sm:-mt-4 mb-6 sm:mb-8 flex items-center gap-1 border-b border-slate-200 overflow-x-auto print:hidden" style={{ scrollbarWidth: 'none' }}>
-              {activeSection.items.map(item => {
-                const active = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`relative shrink-0 flex items-center gap-2 px-3.5 py-3 text-sm font-bold whitespace-nowrap transition-colors border-b-2 -mb-px ${
-                      active ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-700'
-                    }`}
+            <div data-tour="section-tabs" className="-mt-2 sm:-mt-4 mb-6 sm:mb-8 print:hidden">
+              <ScrollRow
+                className="flex items-center gap-2 py-1 px-0.5"
+                fade="#FDFDFD"
+                activeKey={location.pathname}
+                label={`${activeSection.label} pages`}
+              >
+                {activeSection.items.map(item => {
+                  const active = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      aria-current={active ? 'page' : undefined}
+                      className={`shrink-0 h-10 flex items-center gap-2 px-4 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+                        active
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                          : 'bg-white border border-slate-200 text-slate-600 shadow-sm hover:border-indigo-300 hover:text-indigo-700 hover:-translate-y-px hover:shadow-md active:translate-y-0'
+                      }`}
+                    >
+                      <i className={`fas ${item.icon} text-[12px] ${active ? 'text-white/80' : 'text-slate-400'}`}></i>
+                      {item.label}
+                      {item.path === '/storefront' && !storefrontLive && (
+                        <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20 text-white' : 'text-amber-600 bg-amber-50'}`}>Set up</span>
+                      )}
+                    </Link>
+                  );
+                })}
+                {activeSection.label === 'Sell' && storefrontLive && (
+                  <a
+                    href={storefrontUrl!}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="shrink-0 h-10 flex items-center gap-1.5 px-3.5 rounded-xl border border-dashed border-slate-300 text-xs font-bold text-slate-500 hover:text-indigo-600 hover:border-indigo-300 whitespace-nowrap"
+                    title="Open your public page"
                   >
-                    <i className={`fas ${item.icon} text-[12px]`}></i>
-                    {item.label}
-                    {item.path === '/storefront' && !storefrontLive && (
-                      <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Set up</span>
-                    )}
-                  </Link>
-                );
-              })}
-              {activeSection.label === 'Sell' && storefrontLive && (
-                <a
-                  href={storefrontUrl!}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ml-auto shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-400 hover:text-indigo-600"
-                  title="Open your public page"
-                >
-                  Public page <i className="fas fa-arrow-up-right-from-square text-[10px]"></i>
-                </a>
-              )}
+                    Public page <i className="fas fa-arrow-up-right-from-square text-[10px]"></i>
+                  </a>
+                )}
+              </ScrollRow>
             </div>
           )}
           {children}

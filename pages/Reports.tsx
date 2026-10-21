@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
+import ScrollRow from '../components/ScrollRow';
 
 interface ReportSummary {
   totalIncome: number;
@@ -439,7 +440,7 @@ const Reports: React.FC = () => {
               </div>
 
               {/* Bar chart */}
-              <div className="overflow-x-auto">
+              <ScrollRow>
                 <div className="flex items-end gap-2 sm:gap-3 min-w-max pb-2" style={{ minHeight: '200px' }}>
                   {trendData.map(row => {
                     const incH = maxTrendVal > 0 ? (row.income / maxTrendVal) * 160 : 0;
@@ -457,10 +458,10 @@ const Reports: React.FC = () => {
                     );
                   })}
                 </div>
-              </div>
+              </ScrollRow>
 
               {/* Table */}
-              <div className="mt-6 overflow-x-auto">
+              <ScrollRow wrapperClassName="mt-6">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="text-slate-400 text-[10px] font-extrabold uppercase tracking-widest border-b border-slate-100">
@@ -481,7 +482,7 @@ const Reports: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRow>
             </div>
           )}
         </div>

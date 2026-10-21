@@ -3,6 +3,7 @@ import { apiRequest } from '../services/api';
 import { API_BASE_URL, AUTH_TOKEN_KEY } from '../constants';
 import { toPng } from 'html-to-image';
 import { useAuth } from '../context/AuthContext';
+import ScrollRow from '../components/ScrollRow';
 
 interface CategoryRollup {
   taxCategory: string;
@@ -288,7 +289,7 @@ const Tax: React.FC = () => {
       {summary && summary.byCategory.length > 0 && (
         <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 sm:p-8">
           <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-4">Category Breakdown</p>
-          <div className="overflow-x-auto">
+          <ScrollRow>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest border-b border-slate-100">
@@ -321,7 +322,7 @@ const Tax: React.FC = () => {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRow>
         </section>
       )}
 

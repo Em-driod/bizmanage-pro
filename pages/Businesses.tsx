@@ -5,6 +5,7 @@ import { apiRequest } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCurrency } from '../context/CurrencyContext';
 import BrandingSettings from '../components/BrandingSettings';
+import { useTour } from '../components/tour/TourProvider';
 import BrandMark from '../components/BrandMark';
 import { useBranding } from '../context/BrandingContext';
 
@@ -15,6 +16,7 @@ const BusinessPage: React.FC = () => {
   const { user } = useAuth();
   const { availableCurrencies } = useCurrency();
   const { branding, update: updateBranding } = useBranding();
+  const tour = useTour();
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -194,6 +196,15 @@ const BusinessPage: React.FC = () => {
               </form>
             )}
           </div>
+        </div>
+
+        {/* Tips */}
+        <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white border border-slate-200/70">
+          <i className="far fa-circle-question text-indigo-500"></i>
+          <p className="flex-1 text-sm text-slate-600">Each page has a short guided tour the first time you open it.</p>
+          <button onClick={tour.resetAll} className="text-xs font-black text-indigo-600 hover:underline whitespace-nowrap">
+            Show me the tips again
+          </button>
         </div>
 
         {/* Quick stats row */}

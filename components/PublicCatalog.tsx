@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import ScrollRow from './ScrollRow';
 
 export interface CatalogItem {
   productId?: string;
@@ -178,27 +179,28 @@ const PublicCatalog: React.FC<Props> = ({ items, accent, fmt, orderingOn, cart, 
           </div>
         </div>
         {showChips && (
-          <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <ScrollRow className="flex gap-2" activeKey={cat}>
             <button onClick={() => { setCat(''); setSub(''); }} className={chip(!cat)} style={!cat ? { background: accent } : undefined}>
               All
             </button>
             {tree.map((n) => {
               const active = key(cat) === key(n.name);
               return (
-                <button key={n.name} onClick={() => { setCat(n.name); setSub(''); }} className={chip(active)} style={active ? { background: accent } : undefined}>
+                <button key={n.name} data-active={active} onClick={() => { setCat(n.name); setSub(''); }} className={chip(active)} style={active ? { background: accent } : undefined}>
                   {n.name} <span className={active ? 'text-white/60' : 'text-slate-300'}>{n.count}</span>
                 </button>
               );
             })}
-          </div>
+          </ScrollRow>
         )}
         {activeNode && activeNode.subs.size > 0 && (
-          <div className="flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <ScrollRow className="flex gap-1.5" activeKey={sub}>
             {['', ...activeNode.subs.values()].map((s) => {
               const active = key(sub) === key(s);
               return (
                 <button
                   key={s || 'all'}
+                  data-active={active}
                   onClick={() => setSub(s)}
                   className="shrink-0 h-8 px-3 rounded-lg text-[11px] font-bold transition-colors"
                   style={active ? { background: accent + '1f', color: accent } : { color: '#64748B' }}
@@ -207,7 +209,7 @@ const PublicCatalog: React.FC<Props> = ({ items, accent, fmt, orderingOn, cart, 
                 </button>
               );
             })}
-          </div>
+          </ScrollRow>
         )}
       </div>
 
