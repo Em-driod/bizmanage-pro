@@ -42,6 +42,8 @@ const Proposals = lazy(() => import('./pages/Proposals'));
 const PublicProposal = lazy(() => import('./pages/PublicProposal'));
 const Products = lazy(() => import('./pages/Products'));
 const ProductProfit = lazy(() => import('./pages/ProductProfit'));
+const Orders = lazy(() => import('./pages/Orders'));
+const PublicOrder = lazy(() => import('./pages/PublicOrder'));
 const PublicPayslip = lazy(() => import('./pages/PublicPayslip'));
 const ClientPortal = lazy(() => import('./pages/ClientPortal'));
 const CapitalAssets = lazy(() => import('./pages/CapitalAssets'));
@@ -74,6 +76,7 @@ const AppRoutes = () => {
       <Route path="/payslip/:token" element={<PublicPayslip />} />
       <Route path="/portal/:token" element={<ClientPortal />} />
       <Route path="/receipt/:token" element={<PublicReceipt />} />
+      <Route path="/order/:token" element={<PublicOrder />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
 
@@ -95,6 +98,7 @@ const AppRoutes = () => {
         <Route path="/proposals" element={<Layout><Proposals /></Layout>} />
         <Route path="/products" element={<Layout><Products /></Layout>} />
         <Route path="/profit" element={<Layout><ProductProfit /></Layout>} />
+        <Route path="/orders" element={<Layout><Orders /></Layout>} />
         <Route path="/capital-assets" element={<Layout><CapitalAssets /></Layout>} />
         <Route path="/budgets" element={<Layout><Budgets /></Layout>} />
 

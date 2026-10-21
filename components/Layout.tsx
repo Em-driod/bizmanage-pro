@@ -20,27 +20,33 @@ interface Notification {
   link?: string;
 }
 
-const NAV_GROUPS = [
-  {
-    label: 'Daily',
-    items: [
-      { label: 'Dashboard', path: '/dashboard', icon: 'fa-layer-group' },
-      { label: 'Clients', path: '/clients', icon: 'fa-address-book' },
-      { label: 'Transactions', path: '/transactions', icon: 'fa-receipt' },
-      { label: 'Invoices', path: '/invoices', icon: 'fa-file-invoice' },
-      { label: 'Receipts', path: '/receipts', icon: 'fa-money-check-dollar' },
-    ],
-  },
+type NavItem = { label: string; path: string; icon: string };
+
+// Always visible — the pages people open every day.
+const PRIMARY_NAV: NavItem[] = [
+  { label: 'Dashboard', path: '/dashboard', icon: 'fa-layer-group' },
+  { label: 'Invoices', path: '/invoices', icon: 'fa-file-invoice' },
+  { label: 'Receipts', path: '/receipts', icon: 'fa-money-check-dollar' },
+  { label: 'Transactions', path: '/transactions', icon: 'fa-receipt' },
+  { label: 'Clients', path: '/clients', icon: 'fa-address-book' },
+];
+
+// Everything else folds away; only the group you're working in opens itself.
+const NAV_GROUPS: { label: string; icon: string; items: NavItem[] }[] = [
   {
     label: 'Sell',
+    icon: 'fa-store',
     items: [
+      { label: 'Orders', path: '/orders', icon: 'fa-bag-shopping' },
       { label: 'Catalog', path: '/products', icon: 'fa-box-open' },
-      { label: 'Profit', path: '/profit', icon: 'fa-sack-dollar' },
+      { label: 'Storefront', path: '/storefront', icon: 'fa-store' },
       { label: 'Proposals', path: '/proposals', icon: 'fa-file-signature' },
+      { label: 'Profit', path: '/profit', icon: 'fa-sack-dollar' },
     ],
   },
   {
     label: 'Finance',
+    icon: 'fa-chart-pie',
     items: [
       { label: 'Reports', path: '/reports', icon: 'fa-chart-pie' },
       { label: 'Budgets', path: '/budgets', icon: 'fa-wallet' },
@@ -50,7 +56,7 @@ const NAV_GROUPS = [
   },
   {
     label: 'More',
-    collapsed: true,
+    icon: 'fa-ellipsis',
     items: [
       { label: 'Projects', path: '/projects', icon: 'fa-diagram-project' },
       { label: 'Assets', path: '/capital-assets', icon: 'fa-box-archive' },
@@ -59,6 +65,21 @@ const NAV_GROUPS = [
     ],
   },
 ];
+
+const ADMIN_NAV: NavItem[] = [
+  { label: 'Team', path: '/users', icon: 'fa-fingerprint' },
+  { label: 'Activity Log', path: '/activity', icon: 'fa-history' },
+];
+
+const OPEN_GROUPS_KEY = 'morniy.sidebar.open';
+const readOpenGroups = (): string[] => {
+  try {
+    const v = JSON.parse(localStorage.getItem(OPEN_GROUPS_KEY) || '[]');
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+};
 
 const BOTTOM_NAV = [
   { label: 'Home', path: '/dashboard', icon: 'fa-layer-group' },
@@ -75,7 +96,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({ More: true });
+  const [openGroups, setOpenGroups] = useState<string[]>(readOpenGroups);
   const [showFab, setShowFab] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
@@ -84,15 +105,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  const [storefront, setStorefront] = useState<{ slug?: string; isPublic?: boolean } | null>(null);
-  useEffect(() => {
-    if (!user?.businessId) return;
-    apiRequest<{ slug?: string; profile?: { isPublic?: boolean } }>(`/businesses/${user.businessId}`)
-      .then(data => setStorefront({ slug: data.slug, isPublic: data.profile?.isPublic }))
-      .catch(() => {});
-  }, [user?.businessId]);
-  const storefrontUrl = storefront?.slug ? `${window.location.origin}/biz/${storefront.slug}` : null;
-  const storefrontLive = !!(storefront?.isPublic && storefrontUrl);
+  const storefrontUrl = branding.slug ? `${window.location.origin}/biz/${branding.slug}` : null;
+  const storefrontLive = !!(branding.isPublic && storefrontUrl);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -131,13 +145,19 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Auto-expand the group containing the current page
-  useEffect(() => {
-    const activeGroup = NAV_GROUPS.find(g => g.items.some(i => i.path === location.pathname));
-    if (activeGroup?.label === 'More') {
-      setCollapsedGroups(prev => ({ ...prev, More: false }));
-    }
-  }, [location.pathname]);
+  // The group holding the current page is always open.
+  const groupsWithAdmin = isAdmin
+    ? NAV_GROUPS.map(g => (g.label === 'More' ? { ...g, items: [...g.items, ...ADMIN_NAV] } : g))
+    : NAV_GROUPS;
+  const activeGroup = groupsWithAdmin.find(g => g.items.some(i => i.path === location.pathname))?.label;
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups(prev => {
+      const next = prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label];
+      try { localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify(next)); } catch { /* private mode */ }
+      return next;
+    });
+  };
 
   const handleMarkAsRead = async (id: string) => {
     try { await apiRequest(`/notifications/${id}/read`, { method: 'PUT' }); fetchNotifications(); } catch {}
@@ -155,18 +175,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
   const handleLogout = () => { logout(); navigate('/'); };
 
-  const allNavItems = NAV_GROUPS.flatMap(g => g.items);
-  const currentLabel = allNavItems.find(i => i.path === location.pathname)?.label
-    || (location.pathname === '/users' ? 'Team' : location.pathname === '/activity' ? 'Activity Log' : 'Dashboard');
+  const allNavItems = [...PRIMARY_NAV, ...groupsWithAdmin.flatMap(g => g.items)];
+  const currentLabel =
+    allNavItems.find(i => i.path === location.pathname)?.label ||
+    (location.pathname === '/business' ? 'Settings' : 'Dashboard');
 
-  const toggleGroup = (label: string) => {
-    setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
-  };
-
-  const adminItems = [
-    { label: 'Team', path: '/users', icon: 'fa-fingerprint' },
-    { label: 'Activity Log', path: '/activity', icon: 'fa-history' },
-  ];
+  const navLinkCls = (active: boolean) =>
+    `flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
+      active ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+    }`;
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] flex">
@@ -209,147 +226,105 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
           {/* Nav */}
           <div className="flex-1 overflow-y-auto min-h-0 sidebar-nav">
-            <nav className="px-3 py-3 space-y-1">
-              {NAV_GROUPS.map(group => {
-                const isCollapsed = collapsedGroups[group.label] ?? false;
-                const hasActive = group.items.some(i => i.path === location.pathname);
-                return (
-                  <div key={group.label}>
-                    <button
-                      onClick={() => toggleGroup(group.label)}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 mb-1 rounded-xl cursor-pointer group transition-all ${
-                        isCollapsed
-                          ? 'bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm'
-                          : 'hover:bg-slate-100 border border-transparent'
-                      }`}
-                    >
-                      <span className={`text-[11px] font-extrabold uppercase tracking-widest transition-colors ${
-                        hasActive ? 'text-indigo-600' : isCollapsed ? 'text-indigo-600' : 'text-slate-500 group-hover:text-slate-700'
-                      }`}>
-                        {group.label}
-                        {isCollapsed && <span className="ml-1.5 font-bold normal-case tracking-normal text-indigo-400">({group.items.length})</span>}
-                      </span>
-                      <span className={`flex items-center gap-1.5 transition-colors ${isCollapsed ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
-                        <span className={`text-[10px] font-bold ${isCollapsed ? 'text-indigo-500' : 'hidden'}`}>Click to view</span>
-                        <span className={`w-5 h-5 flex items-center justify-center rounded-full transition-colors ${isCollapsed ? 'bg-indigo-500 text-white' : ''}`}>
-                          <i className={`fas fa-chevron-${isCollapsed ? 'down' : 'up'} text-[9px]`}></i>
-                        </span>
-                      </span>
-                    </button>
+            <nav className="px-3 py-3">
+              <div className="space-y-0.5">
+                {PRIMARY_NAV.map(item => (
+                  <Link key={item.path} to={item.path} onClick={() => setIsSidebarOpen(false)} className={navLinkCls(location.pathname === item.path)}>
+                    <i className={`fas ${item.icon} w-4 text-[13px] flex-shrink-0`}></i>
+                    <span className="text-sm tracking-tight">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
 
-                    {!isCollapsed && group.items.map(item => (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setIsSidebarOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-0.5 ${
-                          location.pathname === item.path
-                            ? 'bg-indigo-50 text-indigo-700 font-bold'
-                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+              <div className="mt-3 pt-3 border-t border-slate-100 space-y-0.5">
+                {groupsWithAdmin.map(group => {
+                  const isActive = activeGroup === group.label;
+                  const isOpen = isActive || openGroups.includes(group.label);
+                  return (
+                    <div key={group.label}>
+                      <button
+                        onClick={() => toggleGroup(group.label)}
+                        disabled={isActive}
+                        aria-expanded={isOpen}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
+                          isActive ? 'text-slate-900 cursor-default' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                         }`}
                       >
-                        <i className={`fas ${item.icon} w-4 text-[13px] flex-shrink-0`}></i>
-                        <span className="text-sm tracking-tight">{item.label}</span>
-                      </Link>
-                    ))}
-
-                    {!isCollapsed && group.label === 'Sell' && (
-                      <>
-                        <Link
-                          to="/storefront"
-                          onClick={() => setIsSidebarOpen(false)}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-0.5 ${
-                            location.pathname === '/storefront'
-                              ? 'bg-indigo-50 text-indigo-700 font-bold'
-                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                          }`}
-                        >
-                          <i className="fas fa-store w-4 text-[13px] flex-shrink-0"></i>
-                          <span className="text-sm tracking-tight flex-1">Storefront</span>
-                          {!storefrontLive && (
-                            <span className="text-[9px] font-black uppercase text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-full">Set up</span>
-                          )}
-                        </Link>
-
-                        {storefrontLive ? (
-                          <a
-                            href={storefrontUrl!}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-0.5 text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                          >
-                            <i className="fas fa-globe w-4 text-[13px] flex-shrink-0"></i>
-                            <span className="text-sm tracking-tight flex-1">Public Profile</span>
-                            <i className="fas fa-arrow-up-right-from-square text-[10px] text-slate-300"></i>
-                          </a>
-                        ) : (
-                          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-0.5 text-slate-300 cursor-not-allowed" title="Publish your storefront first">
-                            <i className="fas fa-globe w-4 text-[13px] flex-shrink-0"></i>
-                            <span className="text-sm tracking-tight flex-1">Public Profile</span>
-                          </div>
+                        <i className={`fas ${group.icon} w-4 text-[13px] flex-shrink-0`}></i>
+                        <span className="text-sm tracking-tight flex-1 text-left">{group.label}</span>
+                        {!isActive && (
+                          <i className={`fas fa-chevron-down text-[9px] text-slate-300 transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
                         )}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                      </button>
 
-              {isAdmin && (
-                <div>
-                  <p className="px-3 py-1.5 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Admin</p>
-                  {adminItems.map(item => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setIsSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-0.5 ${
-                        location.pathname === item.path
-                          ? 'bg-indigo-50 text-indigo-700 font-bold'
-                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <i className={`fas ${item.icon} w-4 text-[13px]`}></i>
-                      <span className="text-sm tracking-tight">{item.label}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-
-              <div className="pt-1">
-                <Link
-                  to="/business"
-                  onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                    location.pathname === '/business'
-                      ? 'bg-indigo-50 text-indigo-700 font-bold'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <i className="fas fa-building w-4 text-[13px]"></i>
-                  <span className="text-sm tracking-tight">Settings</span>
-                </Link>
+                      {isOpen && (
+                        <div className="ml-[1.375rem] pl-3 border-l border-slate-100 my-0.5 space-y-0.5">
+                          {group.items.map(item =>
+                            item.path === '/storefront' ? (
+                              <div key={item.path} className="relative">
+                                <Link to={item.path} onClick={() => setIsSidebarOpen(false)} className={`${navLinkCls(location.pathname === item.path)} pr-9`}>
+                                  <span className="text-[13px] tracking-tight flex-1">{item.label}</span>
+                                  {!storefrontLive && (
+                                    <span className="text-[9px] font-black uppercase text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-full">Set up</span>
+                                  )}
+                                </Link>
+                                {storefrontLive && (
+                                  <a
+                                    href={storefrontUrl!}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title="Open your public page"
+                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50"
+                                  >
+                                    <i className="fas fa-arrow-up-right-from-square text-[10px]"></i>
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <Link key={item.path} to={item.path} onClick={() => setIsSidebarOpen(false)} className={navLinkCls(location.pathname === item.path)}>
+                                <span className="text-[13px] tracking-tight">{item.label}</span>
+                              </Link>
+                            ),
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </nav>
           </div>
 
-          {/* User + Sign Out */}
-          <div className="flex-shrink-0 bg-white border-t border-slate-100 px-4 py-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center text-sm font-black flex-shrink-0">
-                {user?.name?.charAt(0)}
+          {/* Account */}
+          <div className="flex-shrink-0 border-t border-slate-100 px-3 py-3">
+            <div className="flex items-center gap-2.5 px-1">
+              <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center text-xs font-black flex-shrink-0">
+                {user?.name?.charAt(0)?.toUpperCase()}
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-black text-slate-900 truncate">{user?.name}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{user?.role}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-bold text-slate-900 truncate leading-tight">{user?.name}</p>
+                <p className="text-[10px] font-semibold text-slate-400 capitalize truncate">{user?.role}</p>
               </div>
+              <Link
+                to="/business"
+                onClick={() => setIsSidebarOpen(false)}
+                title="Settings"
+                aria-label="Settings"
+                className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                  location.pathname === '/business' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <i className="fas fa-gear text-[13px]"></i>
+              </Link>
+              <button
+                onClick={handleLogout}
+                title="Sign out"
+                aria-label="Sign out"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              >
+                <i className="fas fa-arrow-right-from-bracket text-[13px]"></i>
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-600 rounded-xl text-sm font-black transition-colors border border-rose-100"
-            >
-              <i className="fas fa-arrow-right-from-bracket text-sm"></i>
-              Sign Out
-            </button>
           </div>
         </div>
       </aside>

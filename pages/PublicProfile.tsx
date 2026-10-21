@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, useScroll, useSpring, useMotionValue, useInView } from 'framer-motion';
 import { API_BASE_URL } from '../constants';
+import StoreCheckout, { type CartProduct } from '../components/StoreCheckout';
 
-interface ServiceItem { name: string; description?: string; price?: number; image?: string; inStock?: number; }
+interface ServiceItem { productId?: string; name: string; description?: string; price?: number; image?: string; inStock?: number; }
 
 interface ProfileData {
   name: string;
@@ -22,6 +23,7 @@ interface ProfileData {
     logoImage?: string;
     accentColor?: string;
   };
+  ordering?: { enabled: boolean };
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -216,6 +218,29 @@ const PublicProfile: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [cartOpen, setCartOpen] = useState(false);
+  const cartKey = `morniy.cart.${slug}`;
+
+  // The cart survives a refresh or a quick look at another tab.
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(cartKey) || '{}');
+      if (saved && typeof saved === 'object') setCart(saved);
+    } catch { /* ignore */ }
+  }, [cartKey]);
+  useEffect(() => {
+    try { localStorage.setItem(cartKey, JSON.stringify(cart)); } catch { /* private mode */ }
+  }, [cart, cartKey]);
+
+  const setQty = useCallback((productId: string, qty: number) => {
+    setCart(prev => {
+      const next = { ...prev };
+      if (qty <= 0) delete next[productId];
+      else next[productId] = Math.min(999, qty);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/businesses/public/${slug}`)
@@ -253,6 +278,15 @@ const PublicProfile: React.FC = () => {
     : null;
 
   const hasServices = profile.services && profile.services.length > 0;
+  const orderingOn = !!data.ordering?.enabled;
+  const orderable: CartProduct[] = orderingOn
+    ? profile.services
+        .filter(s => s.productId && s.price !== undefined)
+        .map(s => ({ productId: s.productId!, name: s.name, price: s.price!, image: s.image, inStock: s.inStock }))
+    : [];
+  // Drop anything no longer sold (or out of stock) from a saved cart.
+  const cartCount = orderable.reduce((n, p) => n + (cart[p.productId] ?? 0), 0);
+  const cartTotal = orderable.reduce((n, p) => n + (cart[p.productId] ?? 0) * p.price, 0);
   const totalStock = profile.services.reduce((s, x) => s + (x.inStock && x.inStock > 0 ? x.inStock : 0), 0);
   const trackedCount = profile.services.filter(s => s.inStock !== undefined).length;
 
@@ -271,6 +305,37 @@ const PublicProfile: React.FC = () => {
     <div className="bg-[#FAFAFA] text-slate-900 overflow-x-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       <ScrollProgress accent={accent} />
       <MagneticCursor accent={accent} />
+
+      {orderingOn && cartCount > 0 && !cartOpen && (
+        <motion.button
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          onClick={() => setCartOpen(true)}
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[300] h-14 pl-5 pr-2 rounded-full text-white shadow-2xl flex items-center gap-4"
+          style={{ background: '#0F172A', boxShadow: `0 16px 40px ${accent}55` }}
+        >
+          <span className="text-sm font-bold whitespace-nowrap">
+            {cartCount} item{cartCount === 1 ? '' : 's'} · {fmt(cartTotal)}
+          </span>
+          <span className="h-10 px-4 rounded-full flex items-center text-xs font-black uppercase tracking-wider" style={{ background: accent }}>
+            View order
+          </span>
+        </motion.button>
+      )}
+      {orderingOn && (
+        <StoreCheckout
+          open={cartOpen}
+          onClose={() => setCartOpen(false)}
+          slug={data.slug}
+          businessName={data.name}
+          accent={accent}
+          products={orderable}
+          cart={cart}
+          setQty={setQty}
+          clearCart={() => setCart({})}
+          fmt={fmt}
+        />
+      )}
 
       {/* ══════════ NAVBAR ══════════ */}
       <nav className="fixed top-0 inset-x-0 z-[200]">
@@ -306,6 +371,22 @@ const PublicProfile: React.FC = () => {
                 <span className="relative z-10">Chat on WhatsApp</span>
                 <motion.span className="absolute inset-0 bg-[#25D366]" initial={{ x: '-100%' }} whileHover={{ x: 0 }} transition={{ duration: 0.3 }} />
               </motion.a>
+            )}
+            {orderingOn && (
+              <button
+                onClick={() => setCartOpen(true)}
+                className="relative h-9 px-3 flex items-center gap-2 rounded-lg text-white text-xs font-black"
+                style={{ background: accent }}
+                aria-label={`Open order (${cartCount} items)`}
+              >
+                <i className="fas fa-bag-shopping text-xs" />
+                <span className="hidden sm:inline">Order</span>
+                {cartCount > 0 && (
+                  <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[10px] font-black flex items-center justify-center" style={{ color: accent }}>
+                    {cartCount}
+                  </span>
+                )}
+              </button>
             )}
             <button onClick={copyLink} className="w-9 h-9 flex items-center justify-center border border-slate-200 rounded-lg text-slate-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors" title="Copy link">
               <i className={`fas ${copied ? 'fa-check' : 'fa-share-alt'} text-xs`} />
@@ -496,7 +577,7 @@ const PublicProfile: React.FC = () => {
                 </h2>
               </div>
               <p style={{ fontSize: 14, lineHeight: 1.7, color: '#64748B', maxWidth: 300, fontWeight: 500 }}>
-                {profile.services.length} item{profile.services.length !== 1 ? 's' : ''} available — message us to order.
+                {profile.services.length} item{profile.services.length !== 1 ? 's' : ''} available — {orderingOn ? 'add what you want and pay by transfer.' : 'message us to order.'}
               </p>
             </div>
 
@@ -567,7 +648,42 @@ const PublicProfile: React.FC = () => {
 
                         <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
                           <span style={{ fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.4em', color: '#CBD5E1' }}>Item {String(i + 1).padStart(2, '0')}</span>
-                          {waLink && (
+                          {orderingOn && svc.productId && svc.price !== undefined ? (
+                            soldOut ? (
+                              <span className="text-[11px] font-black uppercase text-rose-500">Sold out</span>
+                            ) : (cart[svc.productId] ?? 0) > 0 ? (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => setQty(svc.productId!, (cart[svc.productId!] ?? 0) - 1)}
+                                  className="w-8 h-8 rounded-full border flex items-center justify-center"
+                                  style={{ borderColor: accent + '40', color: accent }}
+                                  aria-label={`One less ${svc.name}`}
+                                >
+                                  <i className="fas fa-minus text-[10px]" />
+                                </button>
+                                <span className="w-6 text-center text-sm font-black text-slate-900">{cart[svc.productId]}</span>
+                                <button
+                                  onClick={() => setQty(svc.productId!, (cart[svc.productId!] ?? 0) + 1)}
+                                  disabled={svc.inStock !== undefined && (cart[svc.productId] ?? 0) >= svc.inStock}
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white disabled:opacity-30"
+                                  style={{ background: accent }}
+                                  aria-label={`One more ${svc.name}`}
+                                >
+                                  <i className="fas fa-plus text-[10px]" />
+                                </button>
+                              </div>
+                            ) : (
+                              <motion.button
+                                whileHover={{ scale: 1.04 }}
+                                whileTap={{ scale: 0.96 }}
+                                onClick={() => setQty(svc.productId!, 1)}
+                                className="h-9 px-4 rounded-full text-white text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5"
+                                style={{ background: accent }}
+                              >
+                                <i className="fas fa-plus text-[9px]" /> Add
+                              </motion.button>
+                            )
+                          ) : waLink && (
                             <motion.a
                               href={`https://wa.me/${profile.whatsapp!.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${data.name}! I'm interested in "${svc.name}".`)}`}
                               target="_blank"

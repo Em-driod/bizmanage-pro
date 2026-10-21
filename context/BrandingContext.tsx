@@ -7,6 +7,7 @@ export interface Branding {
   logoImage: string | null;
   accentColor: string;
   slug: string | null;
+  isPublic: boolean;
   hasBankDetails: boolean;
 }
 
@@ -33,6 +34,7 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       logoImage: null,
       accentColor: DEFAULT_ACCENT,
       slug: null,
+      isPublic: false,
       hasBankDetails: false,
     }),
     [user?.businessName],
@@ -49,6 +51,7 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         logoImage: data.logoImage || null,
         accentColor: data.accentColor || DEFAULT_ACCENT,
         slug: data.slug ?? null,
+        isPublic: !!data.isPublic,
         hasBankDetails: !!data.hasBankDetails,
       });
     } catch {
