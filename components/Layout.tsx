@@ -71,13 +71,13 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Activity Log', path: '/activity', icon: 'fa-history' },
 ];
 
-const OPEN_GROUPS_KEY = 'morniy.sidebar.open';
-const readOpenGroups = (): string[] => {
+const LAST_TAB_KEY = 'morniy.section.lastTab';
+const readLastTabs = (): Record<string, string> => {
   try {
-    const v = JSON.parse(localStorage.getItem(OPEN_GROUPS_KEY) || '[]');
-    return Array.isArray(v) ? v : [];
+    const v = JSON.parse(localStorage.getItem(LAST_TAB_KEY) || '{}');
+    return v && typeof v === 'object' ? v : {};
   } catch {
-    return [];
+    return {};
   }
 };
 
@@ -96,7 +96,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState<string[]>(readOpenGroups);
+  const [lastTabs, setLastTabs] = useState<Record<string, string>>(readLastTabs);
   const [showFab, setShowFab] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
@@ -151,12 +151,22 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     : NAV_GROUPS;
   const activeGroup = groupsWithAdmin.find(g => g.items.some(i => i.path === location.pathname))?.label;
 
-  const toggleGroup = (label: string) => {
-    setOpenGroups(prev => {
-      const next = prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label];
-      try { localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify(next)); } catch { /* private mode */ }
+  const activeSection = groupsWithAdmin.find(g => g.label === activeGroup);
+
+  useEffect(() => {
+    if (!activeGroup) return;
+    setLastTabs(prev => {
+      if (prev[activeGroup] === location.pathname) return prev;
+      const next = { ...prev, [activeGroup]: location.pathname };
+      try { localStorage.setItem(LAST_TAB_KEY, JSON.stringify(next)); } catch { /* private mode */ }
       return next;
     });
+  }, [activeGroup, location.pathname]);
+
+  // A section link opens the tab you last used there, or its first tab.
+  const sectionHref = (group: { label: string; items: NavItem[] }) => {
+    const last = lastTabs[group.label];
+    return last && group.items.some(i => i.path === last) ? last : group.items[0]!.path;
   };
 
   const handleMarkAsRead = async (id: string) => {
@@ -177,6 +187,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const allNavItems = [...PRIMARY_NAV, ...groupsWithAdmin.flatMap(g => g.items)];
   const currentLabel =
+    activeGroup ||
     allNavItems.find(i => i.path === location.pathname)?.label ||
     (location.pathname === '/business' ? 'Settings' : 'Dashboard');
 
@@ -237,60 +248,20 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </div>
 
               <div className="mt-3 pt-3 border-t border-slate-100 space-y-0.5">
-                {groupsWithAdmin.map(group => {
-                  const isActive = activeGroup === group.label;
-                  const isOpen = isActive || openGroups.includes(group.label);
-                  return (
-                    <div key={group.label}>
-                      <button
-                        onClick={() => toggleGroup(group.label)}
-                        disabled={isActive}
-                        aria-expanded={isOpen}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors ${
-                          isActive ? 'text-slate-900 cursor-default' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                        }`}
-                      >
-                        <i className={`fas ${group.icon} w-4 text-[13px] flex-shrink-0`}></i>
-                        <span className="text-sm tracking-tight flex-1 text-left">{group.label}</span>
-                        {!isActive && (
-                          <i className={`fas fa-chevron-down text-[9px] text-slate-300 transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
-                        )}
-                      </button>
-
-                      {isOpen && (
-                        <div className="ml-[1.375rem] pl-3 border-l border-slate-100 my-0.5 space-y-0.5">
-                          {group.items.map(item =>
-                            item.path === '/storefront' ? (
-                              <div key={item.path} className="relative">
-                                <Link to={item.path} onClick={() => setIsSidebarOpen(false)} className={`${navLinkCls(location.pathname === item.path)} pr-9`}>
-                                  <span className="text-[13px] tracking-tight flex-1">{item.label}</span>
-                                  {!storefrontLive && (
-                                    <span className="text-[9px] font-black uppercase text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-full">Set up</span>
-                                  )}
-                                </Link>
-                                {storefrontLive && (
-                                  <a
-                                    href={storefrontUrl!}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    title="Open your public page"
-                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50"
-                                  >
-                                    <i className="fas fa-arrow-up-right-from-square text-[10px]"></i>
-                                  </a>
-                                )}
-                              </div>
-                            ) : (
-                              <Link key={item.path} to={item.path} onClick={() => setIsSidebarOpen(false)} className={navLinkCls(location.pathname === item.path)}>
-                                <span className="text-[13px] tracking-tight">{item.label}</span>
-                              </Link>
-                            ),
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {groupsWithAdmin.map(group => (
+                  <Link
+                    key={group.label}
+                    to={sectionHref(group)}
+                    onClick={() => setIsSidebarOpen(false)}
+                    className={navLinkCls(activeGroup === group.label)}
+                  >
+                    <i className={`fas ${group.icon} w-4 text-[13px] flex-shrink-0`}></i>
+                    <span className="text-sm tracking-tight flex-1">{group.label}</span>
+                    {group.label === 'Sell' && !storefrontLive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Storefront not published yet"></span>
+                    )}
+                  </Link>
+                ))}
               </div>
             </nav>
           </div>
@@ -402,6 +373,39 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </header>
 
         <div className="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10 max-w-7xl mx-auto w-full pb-24 lg:pb-10">
+          {activeSection && (
+            <div className="-mt-2 sm:-mt-4 mb-6 sm:mb-8 flex items-center gap-1 border-b border-slate-200 overflow-x-auto print:hidden" style={{ scrollbarWidth: 'none' }}>
+              {activeSection.items.map(item => {
+                const active = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`relative shrink-0 flex items-center gap-2 px-3.5 py-3 text-sm font-bold whitespace-nowrap transition-colors border-b-2 -mb-px ${
+                      active ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-700'
+                    }`}
+                  >
+                    <i className={`fas ${item.icon} text-[12px]`}></i>
+                    {item.label}
+                    {item.path === '/storefront' && !storefrontLive && (
+                      <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Set up</span>
+                    )}
+                  </Link>
+                );
+              })}
+              {activeSection.label === 'Sell' && storefrontLive && (
+                <a
+                  href={storefrontUrl!}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-auto shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-400 hover:text-indigo-600"
+                  title="Open your public page"
+                >
+                  Public page <i className="fas fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+              )}
+            </div>
+          )}
           {children}
         </div>
       </main>

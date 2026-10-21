@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../constants';
 import BrandMark from '../components/BrandMark';
 
+type Stage = 'placed' | 'paid' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled';
+
 interface PublicOrderData {
   code: string;
   token: string;
@@ -17,11 +19,33 @@ interface PublicOrderData {
   paidAt: string | null;
   customerMarkedPaidAt: string | null;
   receiptToken: string | null;
+  stage?: Stage;
+  progress?: { stage: Stage; at: string; note?: string }[];
   business: { name: string; slug: string | null; logoImage: string | null; accentColor: string; whatsapp: string | null; email: string | null };
   payTo: { bankName?: string; accountNumber?: string; accountName?: string }[];
 }
 
-const POLL_MS = 8000;
+const POLL_MS = 8000; // waiting for payment — check often
+const PROGRESS_POLL_MS = 20000; // paid — check now and then for the next step
+
+const STEP_COPY = (stage: Stage, delivery: boolean) =>
+  ({
+    placed: { title: 'Order placed', icon: 'fa-bag-shopping' },
+    paid: { title: 'Payment received', icon: 'fa-circle-check' },
+    preparing: { title: 'Being prepared', icon: 'fa-kitchen-set' },
+    ready: { title: 'Ready for pickup', icon: 'fa-store' },
+    out_for_delivery: { title: 'On its way', icon: 'fa-truck-fast' },
+    completed: { title: delivery ? 'Delivered' : 'Picked up', icon: 'fa-flag-checkered' },
+    cancelled: { title: 'Cancelled', icon: 'fa-ban' },
+  })[stage];
+
+const HEADLINE: Partial<Record<Stage, (biz: string, delivery: boolean) => string>> = {
+  paid: (biz) => `${biz} has your order and will start on it soon.`,
+  preparing: (biz) => `${biz} is getting your order ready.`,
+  ready: (biz) => `Your order is ready — you can pick it up from ${biz}.`,
+  out_for_delivery: () => 'Your order is on its way to you.',
+  completed: (_biz, delivery) => (delivery ? 'Your order has been delivered. Enjoy!' : 'You’ve picked up your order. Enjoy!'),
+};
 
 // The customer's view of one order: where to pay, the code to use, and a live
 // status that flips to "Paid" by itself once the business's bank sees it.
@@ -47,12 +71,13 @@ const PublicOrder: React.FC = () => {
     load();
   }, [load]);
 
-  // Keep checking while payment is pending, so it turns green on its own.
+  // Keep checking until the order is finished, so payment and every later
+  // step show up on their own.
   useEffect(() => {
-    if (order?.status !== 'pending_payment') return;
+    if (!order || order.status === 'fulfilled' || order.status === 'cancelled') return;
     const t = setInterval(() => {
       if (document.visibilityState === 'visible') load();
-    }, POLL_MS);
+    }, order.status === 'pending_payment' ? POLL_MS : PROGRESS_POLL_MS);
     return () => clearInterval(t);
   }, [order?.status, load]);
 
@@ -149,10 +174,11 @@ const PublicOrder: React.FC = () => {
             <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
               <i className="fas fa-check text-2xl" />
             </div>
-            <p className="text-lg font-black">Payment received</p>
+            <p className="text-lg font-black">
+              {order.stage && order.stage !== 'paid' ? STEP_COPY(order.stage, order.deliveryMethod === 'delivery').title : 'Payment received'}
+            </p>
             <p className="text-sm text-emerald-50 mt-1">
-              Thank you, {order.customerName.split(' ')[0]}! {order.business.name} has your order
-              {order.status === 'fulfilled' ? ' and it’s been completed.' : ' and will get it ready.'}
+              Thank you, {order.customerName.split(' ')[0]}! {(HEADLINE[order.stage || 'paid'] ?? HEADLINE.paid!)(order.business.name, order.deliveryMethod === 'delivery')}
             </p>
             {order.receiptToken && (
               <Link
@@ -228,6 +254,54 @@ const PublicOrder: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Progress tracker — every step, done or still to come */}
+        {paid && (() => {
+          const delivery = order.deliveryMethod === 'delivery';
+          const steps: Stage[] = ['placed', 'paid', 'preparing', delivery ? 'out_for_delivery' : 'ready', 'completed'];
+          const done = new Map((order.progress ?? []).map((p) => [p.stage, p]));
+          const current = order.stage ?? 'paid';
+          const currentIdx = steps.indexOf(current);
+          return (
+            <div className="rounded-2xl bg-white border border-slate-200 p-5">
+              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-4">Order progress</p>
+              <ol className="space-y-0">
+                {steps.map((st, i) => {
+                  const entry = done.get(st);
+                  const reached = i <= currentIdx || !!entry;
+                  const isCurrent = st === current;
+                  const copy = STEP_COPY(st, delivery);
+                  return (
+                    <li key={st} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <span
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0 transition-colors"
+                          style={
+                            reached
+                              ? { background: isCurrent ? accent : accent + '1f', color: isCurrent ? '#fff' : accent, boxShadow: isCurrent ? `0 0 0 4px ${accent}22` : undefined }
+                              : { background: '#f1f5f9', color: '#cbd5e1' }
+                          }
+                        >
+                          <i className={`fas ${copy.icon}`} />
+                        </span>
+                        {i < steps.length - 1 && <span className="w-0.5 flex-1 min-h-[18px] my-1 rounded" style={{ background: i < currentIdx ? accent + '55' : '#e2e8f0' }} />}
+                      </div>
+                      <div className={`pb-4 min-w-0 ${i === steps.length - 1 ? 'pb-0' : ''}`}>
+                        <p className={`text-sm ${isCurrent ? 'font-black text-slate-900' : reached ? 'font-semibold text-slate-700' : 'font-semibold text-slate-300'}`}>{copy.title}</p>
+                        {entry && (
+                          <p className="text-[11px] text-slate-400">
+                            {new Date(entry.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
+                        {entry?.note && <p className="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2 mt-1.5">{entry.note}</p>}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          );
+        })()}
 
         {/* Summary */}
         <div className="rounded-2xl bg-white border border-slate-200 p-5">
