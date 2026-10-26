@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 
 export interface PaymentSettings {
   ordersEnabled: boolean;
+  autoMatchByAmount?: boolean;
   storefrontPublic: boolean;
   storefrontSlug: string | null;
   hasBankDetails: boolean;
@@ -210,6 +211,34 @@ const OrderPaymentSetup: React.FC<{ settings: PaymentSettings; onChange: (s: Pay
         <p className="text-sm text-slate-500 mt-1">
           Use either or both. Anything they can’t match lands in <span className="font-semibold">Unmatched payments</span>, and you can always confirm an order by hand.
         </p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-100 p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-black text-slate-900">Match payments by amount alone</p>
+            <p className="text-sm text-slate-500 mt-1">
+              A transfer with no order code is normally left for you to confirm. Turn this on to mark an order paid automatically when exactly one open order has that amount.
+              Risky: an unrelated transfer of the same amount would be counted as that order’s payment.
+            </p>
+          </div>
+          <button
+            role="switch"
+            aria-checked={!!settings.autoMatchByAmount}
+            aria-label="Match payments by amount alone"
+            disabled={!isAdmin || busy === 'amount'}
+            onClick={() =>
+              save(
+                { autoMatchByAmount: !settings.autoMatchByAmount },
+                'amount',
+                settings.autoMatchByAmount ? 'Amount-only matches now need your confirmation' : 'Orders will be matched by amount when there is no code',
+              )
+            }
+            className={`relative w-12 h-7 rounded-full shrink-0 transition-colors disabled:opacity-50 ${settings.autoMatchByAmount ? 'bg-emerald-500' : 'bg-slate-200'}`}
+          >
+            <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${settings.autoMatchByAmount ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4">
