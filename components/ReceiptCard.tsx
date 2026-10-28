@@ -6,6 +6,10 @@ import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
 import { useBranding } from '../context/BrandingContext';
 import BrandMark from './BrandMark';
+import PrintSheet from './PrintSheet';
+import ThermalSlip, { SlipDoc } from './ThermalSlip';
+import PaperPicker from './PaperPicker';
+import { usePaper } from '../utils/paper';
 import { alpha, brandOr, darken, readableOnDark } from '../utils/color';
 
 export interface ReceiptData {
@@ -47,10 +51,30 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
   const [qrDataUrl, setQrDataUrl] = useState('');
 
   const cardRef = useRef<HTMLDivElement>(null);
+  const [paper] = usePaper('receipt');
 
   const items = receipt.items?.length ? receipt.items : [{ description: receipt.payerName, amount: receipt.amount }];
   const publicLink = `${window.location.origin}/receipt/${receipt.publicToken}`;
   const formattedDate = new Date(receipt.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const slipDoc: SlipDoc = {
+    businessName: name,
+    logo: branding.logoImage,
+    title: 'Receipt',
+    number: receipt.receiptNumber,
+    date: formattedDate,
+    partyLabel: 'Received from',
+    party: [receipt.payerName, receipt.payerEmail, receipt.payerPhone].filter((v): v is string => !!v),
+    status: { label: 'Paid in full', paid: true },
+    items: items.map((item) => {
+      const { qty, unitPrice } = lineParts(item);
+      return { description: item.description, quantity: qty, unitPrice, amount: item.amount };
+    }),
+    totalLabel: 'TOTAL',
+    total: receipt.amount,
+    ...(receipt.notes ? { notes: receipt.notes } : {}),
+    ...(qrDataUrl ? { qr: qrDataUrl } : {}),
+  };
 
   useEffect(() => {
     QRCode.toDataURL(publicLink, { width: 160, margin: 1, color: { dark: '#0f172a', light: '#ffffff' } })
@@ -281,6 +305,11 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
           {!isSharing && <i className="fas fa-arrow-right text-white/50 ml-auto group-hover:translate-x-1 transition-transform"></i>}
         </button>
 
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Print on</p>
+          <PaperPicker kind="receipt" />
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={handleDownload}
@@ -338,19 +367,12 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
         showing this card, and a display:none/overflow:hidden ancestor from that modal would
         hide or clip it even with !important on this element itself. */}
     {createPortal(
-    <div className="print-only relative p-12 bg-white text-slate-900 font-sans" id="receipt-card-print-area">
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @media screen { .print-only { display: none !important; } }
-          @media print {
-            .print-only { display: block !important; }
-            body * { visibility: hidden; }
-            #receipt-card-print-area, #receipt-card-print-area * { visibility: visible; }
-            #receipt-card-print-area { position: absolute; left: 0; top: 0; width: 100%; }
-          }
-        `
-      }} />
-
+    <PrintSheet
+      id="receipt-card-print-area"
+      paper={paper}
+      slip={<ThermalSlip doc={slipDoc} />}
+      sheet={
+        <div className="relative">
       {/* Ink stamp */}
       <div className="absolute top-14 right-16 w-24 h-24 rounded-full border-[3px] border-double border-rose-600/50 flex items-center justify-center rotate-[-16deg] pointer-events-none">
         <div className="flex flex-col items-center">
@@ -426,7 +448,9 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
       )}
 
       <p className="text-[10px] text-slate-400 font-black uppercase tracking-[3px] text-center">Generated via Morniy</p>
-    </div>,
+        </div>
+      }
+    />,
     document.body
     )}
     </>
