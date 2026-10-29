@@ -404,7 +404,7 @@ const Invoices: React.FC = () => {
                 `/invoices/${sendingInvoice._id}/send`,
                 { method: 'POST', body: { email: sendEmail } }
             );
-            setSendResult({ ok: true, msg: res.emailSent ? `Sent to ${sendEmail}` : res.message });
+            setSendResult({ ok: !!res.emailSent, msg: res.emailSent ? `Sent to ${sendEmail}` : res.message });
             fetchInvoices();
         } catch (err) {
             setSendResult({ ok: false, msg: getErrorMessage(err) });
@@ -606,9 +606,9 @@ const Invoices: React.FC = () => {
                                                             </button>
                                                         ))}
                                                         <button
-                                                            disabled
-                                                            title="Send invoice by email — coming soon"
-                                                            className="w-9 h-9 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-300 cursor-not-allowed shadow-sm"
+                                                            onClick={() => handleOpenSend(invoice)}
+                                                            title="Send invoice by email"
+                                                            className="w-9 h-9 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 shadow-sm transition-all"
                                                         >
                                                             <i className="fas fa-paper-plane text-xs"></i>
                                                         </button>
@@ -697,9 +697,9 @@ const Invoices: React.FC = () => {
                                                 </button>
                                             ))}
                                             <button
-                                                disabled
-                                                title="Send invoice by email — coming soon"
-                                                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-300 cursor-not-allowed shadow-sm"
+                                                onClick={() => handleOpenSend(invoice)}
+                                                title="Send invoice by email"
+                                                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-100 rounded-xl text-xs font-bold text-slate-600 active:bg-slate-50 transition-colors shadow-sm"
                                             >
                                                 <i className="fas fa-paper-plane text-xs"></i>
                                             </button>
@@ -1042,11 +1042,6 @@ const Invoices: React.FC = () => {
                                 <i className={`fas ${sendResult.ok ? 'fa-check-circle text-emerald-500' : 'fa-exclamation-circle text-rose-500'} mt-0.5 flex-shrink-0`}></i>
                                 <div>
                                     <p className={`text-sm font-medium ${sendResult.ok ? 'text-emerald-800' : 'text-rose-800'}`}>{sendResult.msg}</p>
-                                    {sendResult.ok && sendResult.msg.includes('failed') && (
-                                        <p className="text-xs text-amber-700 mt-1 font-medium">
-                                            Tip: If you're on Render/cloud hosting, make sure SMTP_PASS is updated in your environment variables — not just .env locally.
-                                        </p>
-                                    )}
                                 </div>
                             </div>
                         ) : (
