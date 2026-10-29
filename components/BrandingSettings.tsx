@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
 import { useNotification } from '../context/NotificationContext';
 import { prepareLogo } from '../utils/logo';
+import PaperPicker from './PaperPicker';
 import BrandMark from './BrandMark';
 import { alpha, darken, isHex, readableOnDark } from '../utils/color';
 
@@ -244,6 +245,24 @@ const BrandingSettings: React.FC = () => {
               <p className="text-xs font-black text-slate-900 truncate">{name}</p>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">App sidebar</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 border-t border-slate-100">
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Printing</p>
+        <p className="text-sm text-slate-500 mt-1">
+          Auto follows the paper your printer is set to: a narrow thermal roll gets a compact receipt, a normal sheet gets the full page.
+          Pick a size to force it. Saved on this device only.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-5 mt-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Receipts</p>
+            <PaperPicker kind="receipt" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Invoices</p>
+            <PaperPicker kind="invoice" />
           </div>
         </div>
       </div>

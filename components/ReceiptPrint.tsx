@@ -2,6 +2,9 @@ import React from 'react';
 import { useCurrency } from '../context/CurrencyContext';
 import { useBranding } from '../context/BrandingContext';
 import BrandMark from './BrandMark';
+import PrintSheet from './PrintSheet';
+import ThermalSlip, { SlipDoc } from './ThermalSlip';
+import { usePaper } from '../utils/paper';
 import { Client } from '../types';
 
 interface ReceiptPrintProps {
@@ -38,6 +41,7 @@ const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ invoice, client, businessNa
     const { formatCurrency } = useCurrency();
     const { branding } = useBranding();
     const name = businessName || branding.name;
+    const [paper] = usePaper('invoice');
 
     if (!invoice) return null;
 
@@ -50,34 +54,41 @@ const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ invoice, client, businessNa
     const isSettled = status === 'paid';
     const hasPartPayment = !isSettled && paid > 0;
     const docLabel = isSettled ? 'Official Receipt' : 'Invoice';
+    const taxAmount = invoice.subtotal * (invoice.tax / 100);
+
+    const slipDoc: SlipDoc = {
+        businessName: name,
+        logo: branding.logoImage,
+        title: isSettled ? 'Receipt' : 'Invoice',
+        number: invoice.invoiceNumber,
+        date: new Date().toLocaleDateString(),
+        partyLabel: 'Billed to',
+        party: [client?.name || 'Valued Customer', client?.email, client?.phone].filter((v): v is string => !!v),
+        status: { label: statusStyle.label, paid: isSettled },
+        items: invoice.lineItems.map((item) => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            amount: item.total,
+        })),
+        totals: [
+            { label: 'Subtotal', value: invoice.subtotal },
+            ...(invoice.tax ? [{ label: `Tax (${invoice.tax}%)`, value: taxAmount }] : []),
+            ...(hasPartPayment ? [{ label: 'Paid', value: paid, negative: true }] : []),
+        ],
+        totalLabel: 'TOTAL',
+        total: invoice.total,
+        ...(!isSettled ? { after: { label: 'BALANCE DUE', value: balance } } : {}),
+        ...(invoice.notes ? { notes: invoice.notes } : {}),
+    };
 
     return (
-        <div className="print-only bg-white text-slate-900 font-sans" id="receipt-print-area">
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        @media screen {
-          .print-only { display: none !important; }
-        }
-        @media print {
-          @page { size: A4; margin: 12mm 14mm; }
-          html, body { height: auto !important; }
-          body * { visibility: hidden; }
-          #receipt-print-area, #receipt-print-area * { visibility: visible; }
-          #receipt-print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            max-width: 182mm;
-            margin: 0 auto;
-            font-size: 12px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          #receipt-print-area table { page-break-inside: auto; }
-          #receipt-print-area tr { page-break-inside: avoid; }
-        }
-      `}} />
+        <PrintSheet
+            id="receipt-print-area"
+            paper={paper}
+            slip={<ThermalSlip doc={slipDoc} />}
+            sheet={
+                <div>
 
             <div className="flex justify-between items-start mb-6 border-b-2 border-slate-100 pb-4">
                 <div className="flex items-center gap-3">
@@ -176,7 +187,9 @@ const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ invoice, client, businessNa
                 <p className="text-xs font-black text-slate-900 mb-0.5 uppercase tracking-widest">Thank you for your business!</p>
                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-[3px]">Generated via Morniy</p>
             </div>
-        </div>
+                </div>
+            }
+        />
     );
 };
 
