@@ -61,7 +61,7 @@ interface Invoice {
 }
 
 const Invoices: React.FC = () => {
-    const { formatCurrency } = useCurrency();
+    const { formatCurrency, currency } = useCurrency();
     const { printReceipt } = usePrint();
     const { branding } = useBranding();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -402,7 +402,7 @@ const Invoices: React.FC = () => {
         try {
             const res = await apiRequest<{ message: string; emailSent: boolean; publicLink: string }>(
                 `/invoices/${sendingInvoice._id}/send`,
-                { method: 'POST', body: { email: sendEmail } }
+                { method: 'POST', body: { email: sendEmail, currency } }
             );
             setSendResult({ ok: !!res.emailSent, msg: res.emailSent ? `Sent to ${sendEmail}` : res.message });
             fetchInvoices();
@@ -1058,6 +1058,7 @@ const Invoices: React.FC = () => {
                                         autoFocus
                                     />
                                     <p className="text-[11px] text-slate-400 mt-1.5">The client will receive a link to view and pay the invoice online.</p>
+                                    <p className="text-[11px] text-slate-500 mt-1 font-semibold">Amounts in the email will be shown in {currency}, the currency selected at the top of the app.</p>
                                 </div>
                                 <div className="flex gap-3 pt-2">
                                     <button
