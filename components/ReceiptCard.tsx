@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { apiRequest } from '../services/api';
+import { useNotification } from '../context/NotificationContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useBranding } from '../context/BrandingContext';
 import BrandMark from './BrandMark';
@@ -46,6 +47,7 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
   const brandOnDark = readableOnDark(brand);
   const [isSharing, setIsSharing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const { showToast } = useNotification();
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
@@ -135,10 +137,16 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
     if (!receipt.payerEmail) return;
     setSendingEmail(true);
     try {
-      await apiRequest(`/receipts/${receipt._id}/send-email`, { method: 'POST', body: { email: receipt.payerEmail } });
-      setEmailSent(true);
-    } catch {
-      alert('Failed to send email');
+      const res = await apiRequest<{ emailSent: boolean }>(`/receipts/${receipt._id}/send-email`, { method: 'POST', body: { email: receipt.payerEmail } });
+      // The server answers 200 even when the mail provider rejected it, so check the flag.
+      if (res?.emailSent) {
+        setEmailSent(true);
+        showToast(`Receipt emailed to ${receipt.payerEmail}`, 'success');
+      } else {
+        showToast('The email could not be sent. Try again, or share the receipt link instead.', 'error');
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to send email', 'error');
     } finally {
       setSendingEmail(false);
     }
@@ -337,15 +345,17 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
 
         {receipt.payerEmail && (
           <button
-            disabled
-            title="Coming soon"
-            className="w-full flex items-center gap-4 px-4 py-3.5 bg-indigo-50 border border-indigo-100 rounded-xl opacity-60 cursor-not-allowed"
+            onClick={handleSendEmail}
+            disabled={sendingEmail}
+            className="w-full flex items-center gap-4 px-4 py-3.5 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100 transition-colors disabled:opacity-60"
           >
             <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
               <i className="fas fa-envelope text-sm"></i>
             </div>
             <div className="text-left">
-              <p className="text-sm font-bold text-slate-800">Send via Email <span className="text-[10px] font-extrabold uppercase text-indigo-500">Coming Soon</span></p>
+              <p className="text-sm font-bold text-slate-800">
+                {sendingEmail ? 'Sending…' : emailSent ? 'Sent — send again' : 'Send via Email'}
+              </p>
               <p className="text-xs text-slate-500 truncate">{receipt.payerEmail}</p>
             </div>
           </button>
