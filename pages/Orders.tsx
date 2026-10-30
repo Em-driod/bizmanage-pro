@@ -46,7 +46,23 @@ interface Credit {
   note?: string;
   order: { _id: string; code: string } | null;
   suggestedOrder: { _id: string; code: string; total: number; customer: { name: string } } | null;
+  invoice?: { _id: string; invoiceNumber: string; balance: number; clientName: string } | null;
+  suggestedInvoice?: { _id: string; invoiceNumber: string; balance: number; clientName: string } | null;
 }
+
+interface OpenInvoice {
+  _id: string;
+  invoiceNumber: string;
+  status: string;
+  balance?: number;
+  total: number;
+  customClientName?: string | null;
+  clientId?: { name?: string } | null;
+}
+
+// A credit can be matched to an order or to an invoice; the picker stores which.
+const suggestionFor = (c: Credit) =>
+  c.suggestedOrder ? `order:${c.suggestedOrder._id}` : c.suggestedInvoice ? `invoice:${c.suggestedInvoice._id}` : '';
 
 const STATUS_META: Record<Status, { label: string; cls: string; icon: string }> = {
   pending_payment: { label: 'Awaiting payment', cls: 'bg-amber-50 text-amber-700', icon: 'fa-hourglass-half' },
@@ -221,12 +237,13 @@ const Orders: React.FC = () => {
     act(next, () => apiRequest<Order>(`/orders/${o._id}/status`, { method: 'PUT', body: { status: next } }), success);
 
   const matchCredit = async (c: Credit) => {
-    const orderId = matchChoice[c._id] ?? c.suggestedOrder?._id;
-    if (!orderId) return;
+    const choice = matchChoice[c._id] ?? suggestionFor(c);
+    if (!choice) return;
+    const [kind, id] = choice.split(':');
     setBusy(c._id);
     try {
-      await apiRequest(`/payments/credits/${c._id}/match`, { method: 'POST', body: { orderId } });
-      showToast('Payment matched — order marked paid', 'success');
+      await apiRequest(`/payments/credits/${c._id}/match`, { method: 'POST', body: kind === 'invoice' ? { invoiceId: id } : { orderId: id } });
+      showToast(kind === 'invoice' ? 'Payment recorded on the invoice' : 'Payment matched — order marked paid', 'success');
       loadCredits(); loadOrders(true); loadSettings();
     } catch (err: any) {
       showToast(err?.message || 'Could not match', 'error');
@@ -245,9 +262,13 @@ const Orders: React.FC = () => {
   };
 
   const [pendingForMatch, setPendingForMatch] = useState<Order[]>([]);
+  const [openInvoices, setOpenInvoices] = useState<OpenInvoice[]>([]);
   useEffect(() => {
     if (tab !== 'payments') return;
     apiRequest<{ data: Order[] }>('/orders?status=pending_payment&limit=100').then((r) => setPendingForMatch(r.data)).catch(() => {});
+    apiRequest<{ data: OpenInvoice[] }>('/invoices?limit=100')
+      .then((r) => setOpenInvoices((r.data || []).filter((i) => ['draft', 'sent', 'partial', 'overdue'].includes(i.status) && (i.balance ?? i.total) > 0)))
+      .catch(() => {});
   }, [tab, credits.length]);
 
   const unmatched = credits.filter((c) => c.status === 'unmatched');
@@ -397,14 +418,14 @@ const Orders: React.FC = () => {
           <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100">
               <p className="text-sm font-black text-slate-900">Payments that need you</p>
-              <p className="text-xs text-slate-400 mt-0.5">Money that arrived but couldn’t be matched to one order for sure — e.g. no code and several orders with the same amount.</p>
+              <p className="text-xs text-slate-400 mt-0.5">Money that arrived but couldn’t be matched for sure — e.g. no order or invoice code, or several with the same amount. Match it to an order or an invoice.</p>
             </div>
             {unmatched.length === 0 ? (
               <p className="p-10 text-center text-sm text-slate-400">All caught up — nothing to match.</p>
             ) : (
               <ul className="divide-y divide-slate-50">
                 {unmatched.map((c) => {
-                  const choice = matchChoice[c._id] ?? c.suggestedOrder?._id ?? '';
+                  const choice = matchChoice[c._id] ?? suggestionFor(c);
                   return (
                     <li key={c._id} className="px-5 py-4 flex flex-col lg:flex-row lg:items-center gap-3">
                       <div className="flex-1 min-w-0">
@@ -422,12 +443,25 @@ const Orders: React.FC = () => {
                             onChange={(e) => setMatchChoice((m) => ({ ...m, [c._id]: e.target.value }))}
                             className="h-10 px-3 rounded-xl border border-slate-200 text-xs font-semibold bg-white w-full lg:w-64"
                           >
-                            <option value="">Match to order…</option>
-                            {pendingForMatch.map((o) => (
-                              <option key={o._id} value={o._id}>
-                                {o.code} · {o.customer.name} · {formatCurrency(o.total)}
-                              </option>
-                            ))}
+                            <option value="">Match to…</option>
+                            {pendingForMatch.length > 0 && (
+                              <optgroup label="Orders awaiting payment">
+                                {pendingForMatch.map((o) => (
+                                  <option key={o._id} value={`order:${o._id}`}>
+                                    {o.code} · {o.customer.name} · {formatCurrency(o.total)}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {openInvoices.length > 0 && (
+                              <optgroup label="Unpaid invoices">
+                                {openInvoices.map((i) => (
+                                  <option key={i._id} value={`invoice:${i._id}`}>
+                                    {i.invoiceNumber} · {i.clientId?.name || i.customClientName || 'Client'} · {formatCurrency(i.balance ?? i.total)} due
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
                           </select>
                           <button
                             onClick={() => matchCredit(c)}
@@ -455,7 +489,7 @@ const Orders: React.FC = () => {
 
           {recentMatched.length > 0 && (
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              <p className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Matched automatically</p>
+              <p className="px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Matched to orders and invoices</p>
               <ul className="divide-y divide-slate-50">
                 {recentMatched.map((c) => (
                   <li key={c._id} className="px-5 py-3 flex items-center gap-3 text-sm">
@@ -466,6 +500,11 @@ const Orders: React.FC = () => {
                       <button onClick={() => { setTab('orders'); openOrder(c.order!._id); }} className="font-mono text-xs font-black text-indigo-600 hover:underline">
                         {c.order.code}
                       </button>
+                    )}
+                    {c.invoice && (
+                      <Link to="/invoices" className="font-mono text-xs font-black text-indigo-600 hover:underline" title={c.invoice.clientName}>
+                        {c.invoice.invoiceNumber}
+                      </Link>
                     )}
                   </li>
                 ))}

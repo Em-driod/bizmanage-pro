@@ -58,7 +58,17 @@ interface Invoice {
     amountPaid?: number;
     balance?: number;
     payments?: InvoicePayment[];
+    paymentCode?: string;
+    customerMarkedPaidAt?: string | null;
 }
+
+// Readable names for how a payment was recorded.
+const METHOD_LABEL: Record<string, string> = {
+    manual: 'Recorded by hand',
+    bank_alert: 'Bank transfer · matched from alert',
+    bank_feed: 'Bank transfer · matched from linked bank',
+    paystack: 'Paystack',
+};
 
 const Invoices: React.FC = () => {
     const { formatCurrency, currency } = useCurrency();
@@ -1205,6 +1215,13 @@ const Invoices: React.FC = () => {
                             </button>
                         </div>
                         <div className="px-6 pt-6 max-h-[70vh] overflow-y-auto">
+                            {payingInvoice.customerMarkedPaidAt && payingInvoice.status !== 'paid' && (
+                                <div className="mb-4 rounded-xl bg-indigo-50 px-4 py-3 text-xs text-indigo-800">
+                                    <i className="fas fa-bell mr-1.5" />
+                                    {getClientName(payingInvoice)} says they’ve paid. Check your account for a transfer
+                                    {payingInvoice.paymentCode ? <> mentioning <span className="font-mono font-black">{payingInvoice.paymentCode}</span></> : null}.
+                                </div>
+                            )}
                             <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100 space-y-1.5">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-slate-400">Invoice Total</span>
@@ -1236,7 +1253,7 @@ const Invoices: React.FC = () => {
                                             return (
                                                 <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-lg px-3 py-2">
                                                     <div className="min-w-0">
-                                                        <p className="text-xs font-bold text-slate-700 capitalize truncate">{p.method}{p.note ? ` · ${p.note}` : ''}</p>
+                                                        <p className="text-xs font-bold text-slate-700 truncate">{METHOD_LABEL[p.method] ?? p.method}{p.note ? ` · ${p.note}` : ''}</p>
                                                         <p className="text-[10px] text-slate-400">{new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                                                     </div>
                                                     <div className="flex items-center gap-2 shrink-0 ml-2">

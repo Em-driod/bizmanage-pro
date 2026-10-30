@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../constants';
 import { toPng } from 'html-to-image';
@@ -43,6 +43,9 @@ interface PublicInvoiceData {
   balance?: number;
   dueDate: string;
   notes?: string;
+  // Short code the client puts in the transfer description, e.g. "IV3HX9QT".
+  paymentCode?: string;
+  customerMarkedPaidAt?: string | null;
 }
 
 // The business's brand colour as the header gradient; falls back to the default
@@ -56,54 +59,63 @@ const PublicInvoice: React.FC = () => {
   const [invoice, setInvoice] = useState<PublicInvoiceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [payEmail, setPayEmail] = useState('');
-  const [isPaying, setIsPaying] = useState(false);
-  const [payError, setPayError] = useState('');
-  const [showPayForm, setShowPayForm] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [sendingNudge, setSendingNudge] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const invoiceCardRef = useRef<HTMLDivElement>(null);
 
   const justPaid = searchParams.get('paid') === 'true';
 
-  useEffect(() => {
-    const fetchInvoice = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/invoices/public/${id}`);
-        if (!res.ok) throw new Error('Invoice not found');
-        const data = await res.json();
-        setInvoice(data);
-        if (data.clientId?.email) setPayEmail(data.clientId.email);
-      } catch (err: any) {
-        setError(
-          err?.message?.toLowerCase().includes('failed to fetch')
-            ? 'Could not connect to the server. Please check your internet connection and try again.'
-            : 'This invoice link is invalid or has expired.'
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchInvoice();
+  const loadInvoice = useCallback(async (silent = false) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/invoices/public/${id}`);
+      if (!res.ok) throw new Error('Invoice not found');
+      setInvoice(await res.json());
+      setError('');
+    } catch (err: any) {
+      if (silent) return;
+      setError(
+        err?.message?.toLowerCase().includes('failed to fetch')
+          ? 'Could not connect to the server. Please check your internet connection and try again.'
+          : 'This invoice link is invalid or has expired.'
+      );
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
   }, [id]);
 
-  const handlePay = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!payEmail.trim()) { setPayError('Enter your email to continue'); return; }
-    setIsPaying(true);
-    setPayError('');
+  useEffect(() => {
+    loadInvoice();
+  }, [loadInvoice]);
+
+  // While money is still owed, check now and then so the page turns "paid"
+  // by itself once the business's bank sees the transfer.
+  const owing = !!invoice && !['paid', 'void'].includes(invoice.status);
+  useEffect(() => {
+    if (!owing) return;
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') loadInvoice(true);
+    }, 15000);
+    return () => clearInterval(t);
+  }, [owing, loadInvoice]);
+
+  const copy = async (key: string, value: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/invoices/public/${id}/pay/init`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: payEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Payment init failed');
-      window.location.href = data.authorization_url;
-    } catch (err: any) {
-      setPayError(err.message);
+      await navigator.clipboard.writeText(value);
+      setCopied(key);
+      setTimeout(() => setCopied((c) => (c === key ? null : c)), 2000);
+    } catch {
+      /* clipboard blocked */
+    }
+  };
+
+  const sayPaid = async () => {
+    setSendingNudge(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/invoices/public/${id}/sent`, { method: 'POST' });
+      if (res.ok) setInvoice(await res.json());
     } finally {
-      setIsPaying(false);
+      setSendingNudge(false);
     }
   };
 
@@ -314,28 +326,98 @@ const PublicInvoice: React.FC = () => {
               </div>
             )}
 
-            {/* Bank Details */}
-            {(invoice.businessId.profile?.bankName || invoice.businessId.profile?.bankName2) && (
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-6">
-                <p className="text-[10px] font-black uppercase tracking-[2px] text-indigo-400 mb-3">Payment Details</p>
-                <div className="space-y-3">
-                  {invoice.businessId.profile?.bankName && (
-                    <div className="bg-white rounded-lg p-3 border border-indigo-100">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{invoice.businessId.profile.bankName}</p>
-                      <p className="text-base font-black text-slate-900 tracking-widest">{invoice.businessId.profile.accountNumber}</p>
-                      <p className="text-sm font-semibold text-slate-600">{invoice.businessId.profile.accountName}</p>
+            {/* Pay by bank transfer — straight into the business's own account */}
+            {!isPaid && invoice.status !== 'void' && (() => {
+              const p = invoice.businessId.profile || {};
+              const accounts = [
+                { bankName: p.bankName, accountNumber: p.accountNumber, accountName: p.accountName },
+                { bankName: p.bankName2, accountNumber: p.accountNumber2, accountName: p.accountName2 },
+              ].filter((a) => a.accountNumber);
+              const accent = p.accentColor && /^#[0-9a-f]{6}$/i.test(p.accentColor) ? p.accentColor : '#4f46e5';
+              const CopyBtn = ({ k, value }: { k: string; value: string }) => (
+                <button
+                  onClick={() => copy(k, value)}
+                  className="shrink-0 h-8 px-3 rounded-lg text-[11px] font-black flex items-center gap-1.5 transition-colors"
+                  style={copied === k ? { background: '#ecfdf5', color: '#059669' } : { background: accent + '14', color: accent }}
+                >
+                  <i className={`fas ${copied === k ? 'fa-check' : 'fa-copy'} text-[10px]`} />
+                  {copied === k ? 'Copied' : 'Copy'}
+                </button>
+              );
+
+              if (accounts.length === 0) {
+                return (
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6 text-center">
+                    <p className="text-sm font-bold text-slate-700">How to pay</p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Please contact {invoice.businessId.name} for their payment details
+                      {p.whatsapp || p.email ? ` — ${[p.whatsapp, p.email].filter(Boolean).join(' · ')}` : ''}.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="rounded-2xl border border-slate-200 overflow-hidden mb-6">
+                  <div className="px-5 py-4 text-center border-b border-slate-100" style={{ background: accent + '0d' }}>
+                    <p className="text-[10px] font-black uppercase tracking-[2px]" style={{ color: accent }}>Pay by bank transfer</p>
+                    <div className="flex items-center justify-center gap-2 mt-1">
+                      <p className="text-2xl sm:text-3xl font-black text-slate-900">{formatMoney(balanceDue, currency)}</p>
+                      <CopyBtn k="amount" value={String(balanceDue)} />
                     </div>
-                  )}
-                  {invoice.businessId.profile?.bankName2 && (
-                    <div className="bg-white rounded-lg p-3 border border-indigo-100">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{invoice.businessId.profile.bankName2}</p>
-                      <p className="text-base font-black text-slate-900 tracking-widest">{invoice.businessId.profile.accountNumber2}</p>
-                      <p className="text-sm font-semibold text-slate-600">{invoice.businessId.profile.accountName2}</p>
+                    {isPartial && <p className="text-xs text-slate-500 mt-0.5">Remaining balance — part already paid</p>}
+                  </div>
+
+                  <div className="p-4 sm:p-5 space-y-3">
+                    {accounts.map((a, i) => (
+                      <div key={i} className="rounded-xl bg-slate-50 p-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{a.bankName || 'Bank'}</p>
+                        <div className="flex items-center justify-between gap-3 mt-1">
+                          <p className="text-lg sm:text-xl font-black text-slate-900 tracking-wider">{a.accountNumber}</p>
+                          <CopyBtn k={`acc${i}`} value={a.accountNumber || ''} />
+                        </div>
+                        {a.accountName && <p className="text-sm font-semibold text-slate-600 mt-0.5">{a.accountName}</p>}
+                      </div>
+                    ))}
+
+                    {invoice.paymentCode && (
+                      <div className="rounded-xl border-2 border-dashed p-4" style={{ borderColor: accent + '55', background: accent + '08' }}>
+                        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: accent }}>
+                          Put this in the transfer description
+                        </p>
+                        <div className="flex items-center justify-between gap-3 mt-1">
+                          <p className="text-xl sm:text-2xl font-black tracking-[0.15em] text-slate-900 font-mono">{invoice.paymentCode}</p>
+                          <CopyBtn k="code" value={invoice.paymentCode} />
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1.5">It links your payment to this invoice so it’s confirmed automatically.</p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3 rounded-xl bg-amber-50 px-4 py-3">
+                      <span className="relative flex w-2.5 h-2.5 shrink-0">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75 animate-ping" />
+                        <span className="relative inline-flex rounded-full w-2.5 h-2.5 bg-amber-500" />
+                      </span>
+                      <p className="text-xs font-semibold text-amber-800">This page updates by itself once your payment arrives.</p>
                     </div>
-                  )}
+
+                    {invoice.customerMarkedPaidAt ? (
+                      <p className="text-[11px] text-slate-400 text-center">
+                        <i className="fas fa-check mr-1" />We’ve told {invoice.businessId.name} you’ve paid. They’ll confirm shortly.
+                      </p>
+                    ) : (
+                      <button
+                        onClick={sayPaid}
+                        disabled={sendingNudge}
+                        className="w-full h-11 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        {sendingNudge ? 'Letting them know…' : 'I’ve sent the money'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Share Buttons */}
             <div className="flex gap-2 mb-3">
@@ -360,42 +442,6 @@ const PublicInvoice: React.FC = () => {
               </button>
             </div>
 
-            {/* Pay Button */}
-            {!isPaid && (
-              <div>
-                {!showPayForm ? (
-                  <button
-                    onClick={() => setShowPayForm(true)}
-                    className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black text-sm uppercase tracking-[2px] rounded-2xl shadow-xl shadow-indigo-200 hover:shadow-indigo-300 transition-all hover:-translate-y-0.5 active:scale-[0.98]"
-                  >
-                    <i className="fas fa-lock mr-2"></i>Pay Now — {formatMoney(balanceDue, currency)}
-                  </button>
-                ) : (
-                  <form onSubmit={handlePay} className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Your Email</label>
-                      <input
-                        type="email"
-                        value={payEmail}
-                        onChange={e => setPayEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
-                        required
-                      />
-                    </div>
-                    {payError && <p className="text-xs text-rose-600 font-medium">{payError}</p>}
-                    <button
-                      type="submit"
-                      disabled={isPaying}
-                      className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black text-sm uppercase tracking-[2px] rounded-2xl shadow-xl shadow-indigo-200 transition-all disabled:opacity-60"
-                    >
-                      {isPaying ? 'Redirecting to Paystack...' : `Pay ${formatMoney(balanceDue, currency)} securely`}
-                    </button>
-                    <button type="button" onClick={() => setShowPayForm(false)} className="w-full py-2 text-xs text-slate-400 hover:text-slate-600">Cancel</button>
-                  </form>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
