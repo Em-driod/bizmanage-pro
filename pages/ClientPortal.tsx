@@ -192,8 +192,8 @@ const ClientPortal: React.FC = () => {
                         className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-extrabold text-white transition-all active:scale-95"
                         style={{ background: accent }}
                       >
-                        <i className="fas fa-lock text-xs" />
-                        Pay {fmt(inv.total, currency)}
+                        <i className="fas fa-building-columns text-xs" />
+                        Pay {fmt(inv.total, currency)} by transfer
                       </a>
                     </div>
                   )}
