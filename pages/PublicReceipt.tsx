@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../constants';
 import { toPng } from 'html-to-image';
 import BrandMark from '../components/BrandMark';
+import PaidStamp, { stampDate } from '../components/PaidStamp';
 import { alpha, brandOr, darken } from '../utils/color';
 
 interface ReceiptData {
@@ -116,12 +117,9 @@ const PublicReceipt: React.FC = () => {
 
       {/* Receipt card */}
       <div ref={cardRef} className="relative max-w-lg mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
-        {/* Ink stamp */}
-        <div className="absolute top-24 right-8 w-24 h-24 rounded-full border-[3px] border-double border-rose-600/50 flex items-center justify-center rotate-[-16deg] pointer-events-none z-10">
-          <div className="flex flex-col items-center">
-            <span className="text-sm font-black text-rose-600/75 tracking-wider">PAID</span>
-            <span className="text-[6px] font-bold text-rose-600/60 tracking-[2px] mt-0.5">MORNIY VERIFIED</span>
-          </div>
+        {/* The business's stamp */}
+        <div className="absolute top-24 right-8 pointer-events-none z-10">
+          <PaidStamp businessName={business?.name || ''} date={stampDate(receipt.date)} size={104} />
         </div>
 
         {/* Header */}

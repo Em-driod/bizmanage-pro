@@ -7,6 +7,7 @@ import { useNotification } from '../context/NotificationContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useBranding } from '../context/BrandingContext';
 import BrandMark from './BrandMark';
+import PaidStamp, { stampDate } from './PaidStamp';
 import PrintSheet from './PrintSheet';
 import ThermalSlip, { SlipDoc } from './ThermalSlip';
 import PaperPicker from './PaperPicker';
@@ -161,16 +162,9 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
         <div ref={cardRef} style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#0f172a', width: '460px', padding: '0', position: 'relative' }}>
           <div style={{ height: '5px', background: `linear-gradient(90deg, ${darken(brand, 0.15)}, ${brand}, ${brandOnDark})` }} />
 
-          {/* Ink stamp */}
-          <div style={{
-            position: 'absolute', top: '58px', right: '30px', width: '92px', height: '92px', borderRadius: '50%',
-            border: '3px double rgba(244,63,94,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transform: 'rotate(-16deg)', pointerEvents: 'none',
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: '16px', fontWeight: 900, color: 'rgba(244,63,94,0.75)', letterSpacing: '1.5px' }}>PAID</span>
-              <span style={{ fontSize: '6px', fontWeight: 700, color: 'rgba(244,63,94,0.6)', letterSpacing: '1.5px', marginTop: '2px' }}>MORNIY VERIFIED</span>
-            </div>
+          {/* The business's stamp */}
+          <div style={{ position: 'absolute', top: '54px', right: '26px', pointerEvents: 'none' }}>
+            <PaidStamp businessName={name} date={stampDate(receipt.date)} size={100} />
           </div>
 
           <div style={{ padding: '32px 36px 22px', background: '#0f172a' }}>
@@ -383,12 +377,9 @@ const ReceiptCard: React.FC<Props> = ({ receipt, businessName, onClose }) => {
       slip={<ThermalSlip doc={slipDoc} />}
       sheet={
         <div className="relative">
-      {/* Ink stamp */}
-      <div className="absolute top-14 right-16 w-24 h-24 rounded-full border-[3px] border-double border-rose-600/50 flex items-center justify-center rotate-[-16deg] pointer-events-none">
-        <div className="flex flex-col items-center">
-          <span className="text-sm font-black text-rose-600/75 tracking-wider">PAID</span>
-          <span className="text-[6px] font-bold text-rose-600/60 tracking-[2px] mt-0.5">MORNIY VERIFIED</span>
-        </div>
+      {/* The business's stamp */}
+      <div className="absolute top-14 right-16 pointer-events-none">
+        <PaidStamp businessName={name} date={stampDate(receipt.date)} size={104} />
       </div>
 
       <div className="flex justify-between items-start mb-10 border-b-2 border-slate-100 pb-8">

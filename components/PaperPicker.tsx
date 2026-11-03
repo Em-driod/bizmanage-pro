@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DocKind, PAPERS, PRINT_WIDTHS, RollId, printWidthTest, setPrintWidth, usePaper } from '../utils/paper';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
 // Segmented switch for the paper a document prints on. Remembered per device.
 const PaperPicker: React.FC<Props> = ({ kind, className = '' }) => {
   const [paper, choose] = usePaper(kind);
+  const [showHelp, setShowHelp] = useState(false);
   return (
     <div className={className}>
       <div role="radiogroup" aria-label="Paper size" className="inline-flex flex-wrap rounded-xl bg-slate-100 p-0.5 gap-0.5">
@@ -60,6 +61,33 @@ const PaperPicker: React.FC<Props> = ({ kind, className = '' }) => {
             <i className="fas fa-ruler-horizontal mr-1" />
             Print a test strip to measure it
           </button>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => setShowHelp((v) => !v)}
+        aria-expanded={showHelp}
+        className="mt-2 text-[11px] font-bold text-slate-500 hover:text-slate-800"
+      >
+        <i className="far fa-circle-question mr-1" />
+        Printing looks wrong?
+        <i className={`fas fa-chevron-down text-[8px] ml-1 transition-transform ${showHelp ? 'rotate-180' : ''}`} />
+      </button>
+      {showHelp && (
+        <div className="mt-1.5 rounded-xl border border-slate-100 bg-white p-3 text-[11px] text-slate-600 leading-relaxed space-y-2">
+          <p>
+            <span className="font-bold text-slate-800">A full page comes out on a POS printer, or it’s badly cut off:</span> the printer’s paper size is probably set to A4.
+            Choose your roll size above instead of Auto, or in the print window open <span className="font-semibold">More settings → Paper size</span> and pick the roll.
+          </p>
+          <p>
+            <span className="font-bold text-slate-800">Words cut off on the right, or too much empty space:</span> tap your roll size above and change <span className="font-semibold">Printed width</span>: smaller if words are cut off, bigger if there’s too much space.
+          </p>
+          <p>
+            <span className="font-bold text-slate-800">Not sure of the width?</span> Print a ruler and read it off:{' '}
+            <button type="button" onClick={() => printWidthTest('thermal58')} className="font-black text-indigo-600 hover:underline">58mm roll</button>
+            {' · '}
+            <button type="button" onClick={() => printWidthTest('thermal80')} className="font-black text-indigo-600 hover:underline">80mm roll</button>
+          </p>
         </div>
       )}
     </div>

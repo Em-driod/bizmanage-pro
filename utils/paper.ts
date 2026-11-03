@@ -24,8 +24,8 @@ export interface PaperProfile {
 
 export const PAPERS: PaperProfile[] = [
   { id: 'auto', label: 'Auto', hint: 'Follows the printer’s paper', widthMm: null, printMm: null, thermal: false },
-  { id: 'thermal58', label: '58mm', hint: 'Small thermal roll', widthMm: 58, printMm: 48, thermal: true },
-  { id: 'thermal80', label: '80mm', hint: 'Standard thermal roll', widthMm: 80, printMm: 72, thermal: true },
+  { id: 'thermal58', label: 'Small roll (58mm)', hint: 'Small POS printer roll', widthMm: 58, printMm: 48, thermal: true },
+  { id: 'thermal80', label: 'Large roll (80mm)', hint: 'Standard POS printer roll', widthMm: 80, printMm: 72, thermal: true },
   { id: 'a5', label: 'A5', hint: 'Half sheet', widthMm: null, printMm: null, thermal: false },
   { id: 'a4', label: 'A4', hint: 'Full sheet', widthMm: null, printMm: null, thermal: false },
 ];
