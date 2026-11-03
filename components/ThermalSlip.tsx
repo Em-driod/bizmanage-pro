@@ -33,8 +33,8 @@ const Rule: React.FC = () => <div style={{ borderTop: '1px dashed #000', margin:
 
 const Row: React.FC<{ left: React.ReactNode; right: React.ReactNode; bold?: boolean; size?: string }> = ({ left, right, bold, size }) => (
   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2mm', fontWeight: bold ? 800 : 500, fontSize: size }}>
-    <span>{left}</span>
-    <span style={{ whiteSpace: 'nowrap' }}>{right}</span>
+    <span style={{ minWidth: 0, wordBreak: 'break-word' }}>{left}</span>
+    <span style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{right}</span>
   </div>
 );
 
@@ -46,7 +46,7 @@ const ThermalSlip: React.FC<{ doc: SlipDoc }> = ({ doc }) => {
     <div
       style={{
         boxSizing: 'border-box',
-        padding: '3mm',
+        padding: '1.5mm',
         color: '#000',
         background: '#fff',
         fontFamily: "'Courier New', ui-monospace, monospace",
