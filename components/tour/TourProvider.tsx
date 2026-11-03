@@ -568,7 +568,7 @@ const TourOverlay: React.FC<{
                 Skip tour
               </button>
             )}
-            <button onClick={onTurnOff} className="hover:text-slate-600 ml-auto">
+            <button onClick={onTurnOff} className="font-semibold text-rose-500 hover:text-rose-700 ml-auto">
               Turn off tips
             </button>
           </div>

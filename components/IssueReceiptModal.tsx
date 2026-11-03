@@ -48,6 +48,7 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
   const [catalogQty, setCatalogQty] = useState<Record<string, number>>({});
 
   const [showTxPicker, setShowTxPicker] = useState(false);
+  const [itemsError, setItemsError] = useState('');
   const [txOptions, setTxOptions] = useState<Transaction[]>([]);
   const [txSearch, setTxSearch] = useState('');
 
@@ -85,7 +86,12 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
     setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: field === 'amount' ? Number(value) || 0 : value } : it));
   };
   const removeItem = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i));
-  const addBlankItem = () => setItems(prev => [...prev, { description: '', amount: 0 }]);
+  const addBlankItem = () => {
+    setItemsError('');
+    setShowCatalog(false);
+    setShowTxPicker(false);
+    setItems(prev => [...prev, { description: '', amount: 0 }]);
+  };
 
   const filteredCatalog = catalog.filter(p => !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()));
 
@@ -123,7 +129,15 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.payerName.trim()) return;
-    if (items.length === 0 || items.some(it => !it.description.trim())) return;
+    if (items.length === 0) {
+      setItemsError('Add at least one item — what did they pay for?');
+      return;
+    }
+    if (items.some(it => !it.description.trim())) {
+      setItemsError('Every item needs a description.');
+      return;
+    }
+    setItemsError('');
     setSaving(true);
     try {
       const data = await apiRequest<ReceiptData>('/receipts', {
@@ -180,19 +194,57 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
 
               {/* Itemized list */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">Items *</label>
-                  <div className="flex items-center gap-3 flex-wrap justify-end">
-                    <button type="button" onClick={() => setShowTxPicker(v => !v)} className="text-[11px] font-black text-slate-600 hover:text-slate-800">
-                      <i className="fas fa-receipt mr-1"></i>Add from transactions
+                <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">What did they pay for? *</label>
+                <p className="text-xs text-slate-400 mt-0.5 mb-2">Add items using any of these:</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                  {[
+                    {
+                      key: 'catalog',
+                      active: showCatalog,
+                      onClick: () => { setItemsError(''); setShowTxPicker(false); setShowCatalog(v => !v); },
+                      icon: 'fa-box-open',
+                      tone: 'text-indigo-600 bg-indigo-50',
+                      title: 'From my catalog',
+                      hint: 'A product you sell. Stock goes down.',
+                    },
+                    {
+                      key: 'transactions',
+                      active: showTxPicker,
+                      onClick: () => { setItemsError(''); setShowCatalog(false); setShowTxPicker(v => !v); },
+                      icon: 'fa-receipt',
+                      tone: 'text-slate-600 bg-slate-100',
+                      title: 'From a transaction',
+                      hint: 'Money you already recorded.',
+                    },
+                    {
+                      key: 'manual',
+                      active: false,
+                      onClick: addBlankItem,
+                      icon: 'fa-pen',
+                      tone: 'text-emerald-600 bg-emerald-50',
+                      title: 'Type it in',
+                      hint: 'Anything else — write what it’s for and the amount.',
+                    },
+                  ].map(o => (
+                    <button
+                      key={o.key}
+                      type="button"
+                      onClick={o.onClick}
+                      aria-pressed={o.active}
+                      className={`text-left rounded-xl border p-2.5 flex sm:block items-center gap-2.5 transition-colors ${
+                        o.active ? 'border-emerald-400 bg-emerald-50/40 ring-1 ring-emerald-200' : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 sm:mb-1.5 ${o.tone}`}>
+                        <i className={`fas ${o.icon} text-[11px]`}></i>
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-black text-slate-800">{o.title}</span>
+                        <span className="block text-[10px] text-slate-500 leading-snug mt-0.5">{o.hint}</span>
+                      </span>
                     </button>
-                    <button type="button" onClick={() => setShowCatalog(v => !v)} className="text-[11px] font-black text-indigo-600 hover:text-indigo-700">
-                      <i className="fas fa-box-open mr-1"></i>Add from catalog
-                    </button>
-                    <button type="button" onClick={addBlankItem} className="text-[11px] font-black text-emerald-600 hover:text-emerald-700">
-                      <i className="fas fa-plus mr-1"></i>Add line
-                    </button>
-                  </div>
+                  ))}
                 </div>
 
                 {showTxPicker && (
@@ -276,13 +328,20 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
                     </div>
                   </div>
                 )}
+                {items.length > 0 && (
+                  <div className="flex items-center gap-2 px-2 mb-1 text-[10px] font-bold text-slate-400">
+                    <span className="flex-1">What it’s for</span>
+                    <span className="w-24 shrink-0">Amount</span>
+                    <span className="w-7 shrink-0" />
+                  </div>
+                )}
                 <div className="space-y-2">
                   {items.map((item, i) => (
                     <div key={i} className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl p-2">
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Web design services"
+                        placeholder="e.g. Bag of rice, delivery fee"
                         value={item.description}
                         onChange={e => updateItem(i, 'description', e.target.value)}
                         className="flex-1 min-w-0 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-400 outline-none"
@@ -298,7 +357,7 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
                       <button
                         type="button"
                         onClick={() => removeItem(i)}
-                        disabled={items.length === 1}
+                        aria-label="Remove this item"
                         className="w-7 h-7 shrink-0 flex items-center justify-center text-slate-300 hover:text-rose-500 disabled:opacity-20 transition-colors"
                       >
                         <i className="fas fa-trash text-xs"></i>
@@ -306,6 +365,12 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
                     </div>
                   ))}
                 </div>
+                {itemsError && (
+                  <p className="text-xs font-semibold text-rose-600 mt-2" role="alert">
+                    <i className="fas fa-circle-exclamation mr-1" />
+                    {itemsError}
+                  </p>
+                )}
                 <div className="flex justify-between items-center px-1 mt-2">
                   <span className="text-xs font-bold text-slate-500">Total</span>
                   <span className="text-sm font-black text-emerald-700">{formatCurrency(total)}</span>
