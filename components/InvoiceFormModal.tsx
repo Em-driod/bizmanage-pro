@@ -47,6 +47,69 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
     const [showCatalog, setShowCatalog] = useState(false);
     const [catalogSearch, setCatalogSearch] = useState('');
     const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+    // How many catalog lines were added during the current picker session (for the Done button)
+    const [pickedCount, setPickedCount] = useState(0);
+
+    const closeCatalog = () => {
+        setShowCatalog(false);
+        setActiveLineIndex(null);
+        setCatalogSearch('');
+        setPickedCount(0);
+    };
+
+    const addedQty = (productId: string) =>
+        lineItems.filter(li => li.productId === productId).reduce((n, li) => n + (Number(li.quantity) || 0), 0);
+
+    const isBlankLine = (li: LineItem) => !li.description.trim() && !li.unitPrice;
+
+    const addProductToInvoice = (p: Product) => {
+        const newItem: LineItem = { description: p.name + (p.description ? ` — ${p.description}` : ''), quantity: 1, unitPrice: p.price, total: p.price, productId: p._id };
+
+        // Filling a specific row: replace it, keep its quantity, and close (one pick)
+        if (activeLineIndex !== null && lineItems[activeLineIndex]) {
+            const quantity = lineItems[activeLineIndex].quantity || 1;
+            setLineItems(prev => prev.map((li, i) => i === activeLineIndex ? { ...newItem, quantity, total: quantity * p.price } : li));
+            closeCatalog();
+            return;
+        }
+
+        // Adding mode: stay open so several items can be picked
+        setLineItems(prev => {
+            const existing = prev.findIndex(li => li.productId === p._id);
+            if (existing >= 0) {
+                return prev.map((li, i) => {
+                    if (i !== existing) return li;
+                    const quantity = (Number(li.quantity) || 0) + 1;
+                    return { ...li, quantity, total: quantity * li.unitPrice };
+                });
+            }
+            // Reuse an empty starter row instead of leaving a blank line that blocks saving
+            const blank = prev.findIndex(isBlankLine);
+            if (blank >= 0) return prev.map((li, i) => i === blank ? newItem : li);
+            return [...prev, newItem];
+        });
+        setPickedCount(c => c + 1);
+    };
+
+    const isDirty = () =>
+        lineItems.some(li => !isBlankLine(li)) || !!customClientName.trim() || !!notes.trim() || !!depositAmount || !!dueDate || taxRate !== 0;
+
+    const requestClose = () => {
+        if (isLoading) return;
+        if (isDirty() && !window.confirm('Close without saving? This invoice will be lost.')) return;
+        onClose();
+    };
+
+    // Esc: close the catalog first; otherwise close the invoice (with a check)
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            if (showCatalog) { closeCatalog(); return; }
+            requestClose();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    });
 
     useEffect(() => {
         const fetchClients = async () => {
@@ -227,9 +290,22 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-start justify-center sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white sm:rounded-xl shadow-xl w-full max-w-2xl sm:my-4 p-5 sm:p-6 rounded-t-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-                <h3 className="text-lg font-bold mb-4 text-slate-800">Create New Invoice</h3>
+        <div
+            className="fixed inset-0 z-50 flex items-end sm:items-start justify-center sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-y-auto"
+            onMouseDown={e => { if (e.target === e.currentTarget) requestClose(); }}
+        >
+            <div role="dialog" aria-modal="true" className="bg-white sm:rounded-xl shadow-xl w-full max-w-2xl sm:my-4 p-5 sm:p-6 rounded-t-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-slate-800">Create New Invoice</h3>
+                    <button
+                        type="button"
+                        onClick={requestClose}
+                        aria-label="Close"
+                        className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
+                    >
+                        <i className="fas fa-times text-sm"></i>
+                    </button>
+                </div>
                 <form onSubmit={(e) => { e.preventDefault(); }} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1 text-slate-700">Client</label>
@@ -289,7 +365,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                             {products.length > 0 && (
                                 <button
                                     type="button"
-                                    onClick={() => { setShowCatalog(v => !v); setCatalogSearch(''); setActiveLineIndex(null); }}
+                                    onClick={() => { if (showCatalog) { closeCatalog(); } else { setShowCatalog(true); setCatalogSearch(''); setActiveLineIndex(null); setPickedCount(0); } }}
                                     className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border transition-colors ${showCatalog ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50'}`}
                                 >
                                     <i className="fas fa-box-open text-[10px]"></i> Catalog {showCatalog ? '▲' : '▼'}
@@ -307,12 +383,23 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                         placeholder="Search catalog..."
                                         value={catalogSearch}
                                         onChange={e => setCatalogSearch(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Escape') { e.stopPropagation(); closeCatalog(); }
+                                            if (e.key === 'Enter') e.preventDefault();
+                                        }}
                                         className="flex-1 bg-transparent text-sm text-slate-700 placeholder-slate-400 outline-none"
                                         autoFocus
                                     />
                                     {catalogSearch && (
-                                        <button type="button" onClick={() => setCatalogSearch('')} className="text-slate-300 hover:text-slate-500 text-xs"><i className="fas fa-times"/></button>
+                                        <button type="button" onClick={() => setCatalogSearch('')} aria-label="Clear search" className="text-slate-300 hover:text-slate-500 text-xs"><i className="fas fa-times"/></button>
                                     )}
+                                    <button
+                                        type="button"
+                                        onClick={closeCatalog}
+                                        className="shrink-0 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black rounded-lg transition-colors"
+                                    >
+                                        {pickedCount > 0 ? `Done · ${pickedCount} added` : 'Close'}
+                                    </button>
                                 </div>
                                 <div className="max-h-52 overflow-y-auto divide-y divide-slate-50">
                                     {products
@@ -321,22 +408,8 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                             <button
                                                 key={p._id}
                                                 type="button"
-                                                onClick={() => {
-                                                    const newItem = { description: p.name + (p.description ? ` — ${p.description}` : ''), quantity: 1, unitPrice: p.price, total: p.price, productId: p._id };
-                                                    if (activeLineIndex !== null && lineItems[activeLineIndex]) {
-                                                        // Fill the selected row, keeping any quantity already entered
-                                                        const quantity = lineItems[activeLineIndex].quantity || 1;
-                                                        const updated = [...lineItems];
-                                                        updated[activeLineIndex] = { ...newItem, quantity, total: quantity * p.price };
-                                                        setLineItems(updated);
-                                                    } else {
-                                                        setLineItems(prev => [...prev, newItem]);
-                                                    }
-                                                    setShowCatalog(false);
-                                                    setActiveLineIndex(null);
-                                                    setCatalogSearch('');
-                                                }}
-                                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-indigo-50 transition-colors text-left group"
+                                                onClick={() => addProductToInvoice(p)}
+                                                className={`w-full flex items-center justify-between px-4 py-3 transition-colors text-left group ${addedQty(p._id) > 0 ? 'bg-emerald-50/60 hover:bg-emerald-50' : 'hover:bg-indigo-50'}`}
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     {p.image
@@ -344,7 +417,14 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                                         : <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-100"><i className="fas fa-box text-indigo-300 text-xs"/></div>
                                                     }
                                                     <div className="min-w-0">
-                                                        <p className="text-sm font-bold text-slate-800 truncate">{p.name}</p>
+                                                        <p className="text-sm font-bold text-slate-800 truncate">
+                                                            {p.name}
+                                                            {addedQty(p._id) > 0 && (
+                                                                <span className="ml-1.5 text-[10px] font-black text-emerald-600">
+                                                                    <i className="fas fa-check mr-0.5" />{addedQty(p._id)} added
+                                                                </span>
+                                                            )}
+                                                        </p>
                                                         {p.description && <p className="text-[11px] text-slate-400 truncate">{p.description}</p>}
                                                         {p.category && !p.description && <p className="text-[11px] text-slate-400">{p.category}</p>}
                                                     </div>
@@ -363,6 +443,11 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                                 {activeLineIndex !== null && (
                                     <div className="px-4 py-2 bg-amber-50 border-t border-amber-100">
                                         <p className="text-[11px] text-amber-700 font-medium">Filling row {activeLineIndex + 1} — click an item above to replace it</p>
+                                    </div>
+                                )}
+                                {activeLineIndex === null && (
+                                    <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
+                                        <p className="text-[11px] text-slate-500 font-medium">Tap items to add them. Tap again to add one more. Press <b>Done</b> when finished.</p>
                                     </div>
                                 )}
                             </div>
@@ -501,7 +586,7 @@ const InvoiceFormModal: React.FC<InvoiceFormModalProps> = ({ onClose, onSave, in
                     <div className="flex flex-col sm:flex-row gap-3 mt-6 sticky bottom-0 bg-white pt-4 pb-2">
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={requestClose}
                             className="flex-1 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors font-bold text-slate-600 order-3 sm:order-1"
                         >
                             Cancel

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
 import { Client } from '../types';
@@ -52,14 +53,20 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
   const [txOptions, setTxOptions] = useState<Transaction[]>([]);
   const [txSearch, setTxSearch] = useState('');
 
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [txLoading, setTxLoading] = useState(false);
+  const [focusItemIndex, setFocusItemIndex] = useState<number | null>(null);
+
   useEffect(() => {
     if (!showCatalog || catalog.length > 0) return;
-    apiRequest<CatalogProduct[]>('/products').then(setCatalog).catch(() => {});
+    setCatalogLoading(true);
+    apiRequest<CatalogProduct[]>('/products').then(setCatalog).catch(() => {}).finally(() => setCatalogLoading(false));
   }, [showCatalog]);
 
   useEffect(() => {
     if (!showTxPicker || txOptions.length > 0) return;
-    apiRequest<{ data: Transaction[] }>('/transactions?limit=100').then(res => setTxOptions(res.data)).catch(() => {});
+    setTxLoading(true);
+    apiRequest<{ data: Transaction[] }>('/transactions?limit=100').then(res => setTxOptions(res.data)).catch(() => {}).finally(() => setTxLoading(false));
   }, [showTxPicker]);
 
   const latestDate = transactions.reduce<string | null>((latest, tx) => {
@@ -90,19 +97,71 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
     setItemsError('');
     setShowCatalog(false);
     setShowTxPicker(false);
+    setFocusItemIndex(items.length); // put the cursor straight into the new line
     setItems(prev => [...prev, { description: '', amount: 0 }]);
   };
 
   const filteredCatalog = catalog.filter(p => !catalogSearch || p.name.toLowerCase().includes(catalogSearch.toLowerCase()));
 
+  const closePickers = () => {
+    setShowCatalog(false);
+    setShowTxPicker(false);
+    setCatalogSearch('');
+    setTxSearch('');
+  };
+
+  // Esc closes an open picker first (not the whole modal)
+  const onPickerKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { e.stopPropagation(); closePickers(); }
+    // Enter in the search box shouldn't submit the receipt form
+    if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault();
+  };
+
+  // Has the user typed/added anything we'd lose by closing?
+  const isDirty = step === 'form' && (
+    items.length !== transactions.length ||
+    form.payerName !== (client?.name || '') ||
+    form.payerEmail !== (client?.email || '') ||
+    form.payerPhone !== (client?.phone || '') ||
+    !!form.notes.trim()
+  );
+
+  const requestClose = () => {
+    if (saving) return;
+    if (isDirty && !window.confirm('Close without saving? What you entered for this receipt will be lost.')) return;
+    onClose();
+  };
+
+  const navigate = useNavigate();
+  const goToProducts = () => {
+    if (isDirty && !window.confirm('Leave to add products? This receipt hasn’t been saved yet.')) return;
+    onClose();
+    navigate('/products');
+  };
+
+  // Esc: close an open picker first; otherwise close the modal
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (showCatalog || showTxPicker) { closePickers(); return; }
+      requestClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  const catalogAddedCount = items.filter(it => it.productId).length;
+  const txAddedCount = items.filter(it => it.transactionId).length;
+
   const addFromCatalog = (product: CatalogProduct) => {
     const qty = Math.max(1, catalogQty[product._id] || 1);
+    setCatalogQty(q => ({ ...q, [product._id]: 1 }));
     setItems(prev => {
       const existingIdx = prev.findIndex(it => it.productId === product._id);
       if (existingIdx >= 0) {
         const newQty = (prev[existingIdx].quantity || 1) + qty;
         return prev.map((it, idx) => idx === existingIdx
-          ? { ...it, quantity: newQty, amount: product.price * newQty }
+          ? { ...it, quantity: newQty, amount: product.price * newQty, description: `${product.name} x${newQty}` }
           : it);
       }
       return [
@@ -165,8 +224,11 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
   const hasPreFill = !!(client?.name);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+      onMouseDown={e => { if (e.target === e.currentTarget) requestClose(); }}
+    >
+      <div role="dialog" aria-modal="true" className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
 
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-5 flex items-center justify-between flex-shrink-0">
@@ -183,14 +245,14 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors">
+          <button onClick={requestClose} aria-label="Close" className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors">
             <i className="fas fa-times text-sm"></i>
           </button>
         </div>
 
         <div className="overflow-y-auto flex-1">
           {step === 'form' ? (
-            <form onSubmit={handleCreate} className="p-6 space-y-4">
+            <form id="issue-receipt-form" onSubmit={handleCreate} className="p-6 space-y-4">
 
               {/* Itemized list */}
               <div>
@@ -248,17 +310,35 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
                 </div>
 
                 {showTxPicker && (
-                  <div className="mb-3 bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-2">
+                  <div onKeyDown={onPickerKeyDown} className="mb-3 bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Pick transactions</p>
+                      <button type="button" onClick={closePickers}
+                        className="px-3 py-1 bg-slate-800 hover:bg-slate-900 text-white text-[10px] font-black rounded-lg transition-colors">
+                        {txAddedCount > 0 ? `Done · ${txAddedCount} added` : 'Close'}
+                      </button>
+                    </div>
                     <input
                       type="text"
+                      autoFocus
                       placeholder="Search transactions…"
                       value={txSearch}
                       onChange={e => setTxSearch(e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-400 outline-none"
                     />
                     <div className="max-h-48 overflow-y-auto space-y-1.5">
-                      {filteredTxOptions.length === 0 ? (
-                        <p className="text-xs text-slate-400 text-center py-3">No matching transactions</p>
+                      {txLoading ? (
+                        <p className="text-xs text-slate-400 text-center py-3"><i className="fas fa-spinner fa-spin mr-1" />Loading…</p>
+                      ) : filteredTxOptions.length === 0 ? (
+                        <div className="text-center py-3 space-y-2">
+                          <p className="text-xs text-slate-500">
+                            {txSearch ? `Nothing matches “${txSearch}”.` : 'No recorded transactions to pick from.'}
+                          </p>
+                          <button type="button" onClick={addBlankItem}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black rounded-lg">
+                            <i className="fas fa-pen mr-1" />Type it in instead
+                          </button>
+                        </div>
                       ) : filteredTxOptions.map(tx => (
                         <div key={tx._id} className="flex items-center gap-2 bg-white border border-slate-100 rounded-lg p-2">
                           <div className="flex-1 min-w-0">
@@ -279,24 +359,60 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
                 )}
 
                 {showCatalog && (
-                  <div className="mb-3 bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-2">
+                  <div onKeyDown={onPickerKeyDown} className="mb-3 bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Pick from catalog</p>
+                      <button type="button" onClick={closePickers}
+                        className="px-3 py-1 bg-slate-800 hover:bg-slate-900 text-white text-[10px] font-black rounded-lg transition-colors">
+                        {catalogAddedCount > 0 ? `Done · ${catalogAddedCount} added` : 'Close'}
+                      </button>
+                    </div>
                     <input
                       type="text"
+                      autoFocus
                       placeholder="Search catalog…"
                       value={catalogSearch}
                       onChange={e => setCatalogSearch(e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-400 outline-none"
                     />
                     <div className="max-h-48 overflow-y-auto space-y-1.5">
-                      {filteredCatalog.length === 0 ? (
-                        <p className="text-xs text-slate-400 text-center py-3">No catalog items found</p>
+                      {catalogLoading ? (
+                        <p className="text-xs text-slate-400 text-center py-3"><i className="fas fa-spinner fa-spin mr-1" />Loading your products…</p>
+                      ) : filteredCatalog.length === 0 ? (
+                        <div className="text-center py-3 space-y-2">
+                          <p className="text-xs text-slate-500">
+                            {catalogSearch
+                              ? `Nothing matches “${catalogSearch}”.`
+                              : 'You haven’t added any products yet.'}
+                          </p>
+                          <div className="flex flex-wrap justify-center gap-2">
+                            <button type="button" onClick={addBlankItem}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black rounded-lg">
+                              <i className="fas fa-pen mr-1" />Type it in instead
+                            </button>
+                            {!catalogSearch && (
+                              <button type="button" onClick={goToProducts}
+                                className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-[11px] font-black rounded-lg">
+                                <i className="fas fa-plus mr-1" />Add products
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       ) : filteredCatalog.map(p => {
                         const lowStock = p.trackStock && (p.stock ?? 0) <= 0;
                         const qty = catalogQty[p._id] || 1;
+                        const inReceipt = items.find(it => it.productId === p._id);
                         return (
-                          <div key={p._id} className="flex items-center gap-2 bg-white border border-slate-100 rounded-lg p-2">
+                          <div key={p._id} className={`flex items-center gap-2 border rounded-lg p-2 ${inReceipt ? 'bg-emerald-50/60 border-emerald-200' : 'bg-white border-slate-100'}`}>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-slate-800 truncate">{p.name}</p>
+                              <p className="text-xs font-bold text-slate-800 truncate">
+                                {p.name}
+                                {inReceipt && (
+                                  <span className="ml-1.5 text-[9px] font-black text-emerald-600">
+                                    <i className="fas fa-check mr-0.5" />{inReceipt.quantity || 1} added
+                                  </span>
+                                )}
+                              </p>
                               <p className="text-[10px] text-slate-400">
                                 {formatCurrency(p.price)}
                                 {p.trackStock && (
@@ -341,6 +457,7 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
                       <input
                         type="text"
                         required
+                        autoFocus={i === focusItemIndex}
                         placeholder="e.g. Bag of rice, delivery fee"
                         value={item.description}
                         onChange={e => updateItem(i, 'description', e.target.value)}
@@ -371,10 +488,11 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
                     {itemsError}
                   </p>
                 )}
-                <div className="flex justify-between items-center px-1 mt-2">
-                  <span className="text-xs font-bold text-slate-500">Total</span>
-                  <span className="text-sm font-black text-emerald-700">{formatCurrency(total)}</span>
-                </div>
+                {items.length === 0 && !showCatalog && !showTxPicker && (
+                  <p className="text-xs text-slate-400 text-center py-2 border border-dashed border-slate-200 rounded-xl">
+                    Nothing added yet — tap one of the boxes above.
+                  </p>
+                )}
               </div>
 
               {/* Pre-fill notice */}
@@ -420,22 +538,33 @@ const IssueReceiptModal: React.FC<Props> = ({ transactions = [], client, onClose
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-400 outline-none" />
                 </div>
               </div>
-
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" disabled={saving} className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
-                  {saving
-                    ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Creating...</>
-                    : <><i className="fas fa-receipt text-xs"></i> Issue Receipt</>}
-                </button>
-              </div>
             </form>
           ) : receipt ? (
             <ReceiptCard receipt={receipt} onClose={onClose} />
           ) : null}
         </div>
+
+        {/* Always-visible footer: total + actions, no scrolling needed */}
+        {step === 'form' && (
+          <div className="flex-shrink-0 border-t border-slate-100 bg-white px-6 py-3 space-y-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-slate-500">
+                Total{items.length > 0 ? ` · ${items.length} item${items.length !== 1 ? 's' : ''}` : ''}
+              </span>
+              <span className="text-base font-black text-emerald-700">{formatCurrency(total)}</span>
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={requestClose} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" form="issue-receipt-form" disabled={saving} className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+                {saving
+                  ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Creating...</>
+                  : <><i className="fas fa-receipt text-xs"></i> Issue Receipt</>}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
