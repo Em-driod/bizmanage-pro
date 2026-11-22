@@ -5,6 +5,7 @@ import { apiRequest, getErrorMessage } from '../services/api';
 import { useCurrency } from '../context/CurrencyContext';
 import { getCurrencySymbol } from '../utils/currency';
 import ScanTransactionModal from '../components/ScanTransactionModal';
+import ScanReviewModal from '../components/ScanReviewModal';
 import ImportCsvModal from '../components/ImportCsvModal';
 import IssueReceiptModal from '../components/IssueReceiptModal';
 import TransactionSummaryModal from '../components/TransactionSummaryModal';
@@ -150,28 +151,15 @@ const Transactions: React.FC = () => {
   };
 
   // Handle data from the scan modal
-  const handleScanComplete = async (data: ScanResponse) => {
+  const [scanReview, setScanReview] = useState<{ data: ScanResponse; imageUrl: string | null; fileName: string } | null>(null);
+
+  // Nothing is saved yet: the user checks the extracted figures against the photo first.
+  const handleScanComplete = (data: ScanResponse, imageUrl: string | null, fileName: string) => {
     setShowScanModal(false);
-    setIsSubmitting(true);
-    try {
-      if (data.transactions && data.transactions.length > 0) {
-        await apiRequest('/scanned-transactions', {
-          method: 'POST',
-          body: {
-            transactions: data.transactions,
-            text: data.text,
-            originalFileName: "Scanned Document" // This could be improved to use the actual file name
-          },
-        });
-        alert('Scan saved successfully! You can review it in the Scanned Transactions page.');
-        // Maybe navigate to the scanned transactions page? For now, just an alert.
-      } else {
-        alert("No transactions were found in the document.");
-      }
-    } catch (err) {
-      alert('Error saving scan: ' + getErrorMessage(err));
-    } finally {
-      setIsSubmitting(false);
+    if (data.transactions && data.transactions.length > 0) {
+      setScanReview({ data, imageUrl, fileName });
+    } else {
+      alert('No transactions were found in the document.');
     }
   };
 
@@ -279,83 +267,62 @@ const Transactions: React.FC = () => {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Financial Records</h2>
           <p className="text-sm sm:text-base md:text-lg text-slate-500 font-medium">Track all incoming and outgoing funds with precision.</p>
         </div>
-        <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full sm:w-auto lg:w-auto lg:shrink-0">
-          {/* Phone only: two equal primary actions up top, everything else collapses
-              into a compact tap-strip below so the record list isn't pushed off-screen
-              by a wall of stacked full-width buttons. */}
-          <div className="flex gap-2 w-full sm:hidden">
+        <div className="w-full lg:w-[22rem] lg:shrink-0 space-y-2.5">
+          {/* Primary capture tiles */}
+          <div className="grid grid-cols-2 gap-2.5">
             <button
               onClick={() => { resetForm(); setShowModal(true); }}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all active:scale-95 text-sm font-bold"
+              className="group relative overflow-hidden text-left rounded-3xl p-4 bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 text-white shadow-lg shadow-indigo-200/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-300/70 active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-300"
             >
-              <i className="fas fa-plus text-xs"></i> New Entry
+              <span className="pointer-events-none absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10 transition-transform duration-500 group-hover:scale-150"></span>
+              <span className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm mb-3 transition-transform duration-300 group-hover:rotate-90">
+                <i className="fas fa-plus text-sm"></i>
+              </span>
+              <span className="relative block text-sm font-black leading-tight">New Entry</span>
+              <span className="relative block text-[11px] font-medium text-indigo-100/90 mt-0.5">Log income or expense</span>
             </button>
+
             <button
-              onClick={() => { setShowScanModal(true); }}
+              onClick={() => setShowScanModal(true)}
               disabled={isSubmitting}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200 transition-all active:scale-95 text-sm font-bold disabled:bg-slate-200 disabled:shadow-none"
+              className="group relative overflow-hidden text-left rounded-3xl p-4 bg-gradient-to-br from-sky-400 via-blue-500 to-blue-700 text-white shadow-lg shadow-blue-200/70 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-300/70 active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-300 disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
             >
-              <i className="fas fa-camera text-xs"></i> {isSubmitting ? 'Processing...' : 'Snap'}
-            </button>
-          </div>
-          <div className="flex gap-2 w-full sm:hidden">
-            <button
-              onClick={() => { navigate('/scanned-transactions'); }}
-              className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-50 border border-slate-100 text-slate-600 rounded-xl py-2.5 active:bg-slate-100 transition-colors"
-            >
-              <i className="fas fa-box-archive text-sm text-indigo-400"></i>
-              <span className="text-[10px] font-bold">Scans</span>
-            </button>
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-50 border border-slate-100 text-slate-600 rounded-xl py-2.5 active:bg-slate-100 transition-colors"
-            >
-              <i className="fas fa-file-csv text-sm text-emerald-500"></i>
-              <span className="text-[10px] font-bold">Import</span>
-            </button>
-            <button
-              onClick={() => setShowSummaryModal(true)}
-              className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-50 border border-slate-100 text-slate-600 rounded-xl py-2.5 active:bg-slate-100 transition-colors"
-            >
-              <i className="fas fa-print text-sm text-slate-400"></i>
-              <span className="text-[10px] font-bold">Summary</span>
+              <span className="pointer-events-none absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/10 transition-transform duration-500 group-hover:scale-150"></span>
+              <span className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm mb-3 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
+                <i className={`fas ${isSubmitting ? 'fa-circle-notch fa-spin' : 'fa-camera'} text-sm`}></i>
+              </span>
+              <span className="relative block text-sm font-black leading-tight">{isSubmitting ? 'Processing…' : 'Snap'}</span>
+              <span className="relative block text-[11px] font-medium text-sky-100/90 mt-0.5">Scan a receipt</span>
             </button>
           </div>
 
-          {/* sm and up: original stacked/inline layout, unchanged */}
-          <button
-            onClick={() => { navigate('/scanned-transactions'); }}
-            className="hidden sm:flex sm:w-auto lg:w-full bg-slate-800 hover:bg-slate-900 text-white px-5 py-3 lg:px-4 lg:py-2.5 rounded-2xl items-center justify-center gap-2 shadow-lg shadow-slate-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
-          >
-            <i className="fas fa-box-archive text-xs text-indigo-400"></i> View Recorded Scans
-          </button>
-          <div className="hidden sm:flex gap-2 sm:w-auto lg:w-full">
+          {/* Secondary tools: one connected pill */}
+          <div className="grid grid-cols-3 divide-x divide-slate-100 rounded-2xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
             <button
-              onClick={() => { resetForm(); setShowModal(true); }}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
+              onClick={() => navigate('/scanned-transactions')}
+              className="group flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 px-2 py-3 text-slate-600 hover:bg-indigo-50/70 transition-colors focus:outline-none focus-visible:bg-indigo-50"
+              title="View recorded scans"
             >
-              <i className="fas fa-plus text-xs"></i> New Entry
+              <i className="fas fa-box-archive text-sm text-indigo-400 transition-transform duration-200 group-hover:scale-125"></i>
+              <span className="text-[11px] sm:text-xs font-bold group-hover:text-indigo-700">Scans</span>
             </button>
             <button
-              onClick={() => { setShowScanModal(true); }}
-              disabled={isSubmitting}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 lg:px-4 lg:py-2.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold disabled:bg-slate-200 disabled:shadow-none"
+              onClick={() => setShowImportModal(true)}
+              className="group flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 px-2 py-3 text-slate-600 hover:bg-emerald-50/70 transition-colors focus:outline-none focus-visible:bg-emerald-50"
+              title="Import transactions from CSV"
             >
-              <i className="fas fa-camera text-xs"></i> {isSubmitting ? 'Processing...' : 'Snap'}
+              <i className="fas fa-file-csv text-sm text-emerald-500 transition-transform duration-200 group-hover:scale-125"></i>
+              <span className="text-[11px] sm:text-xs font-bold group-hover:text-emerald-700">Import</span>
+            </button>
+            <button
+              onClick={() => setShowSummaryModal(true)}
+              className="group flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 px-2 py-3 text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none focus-visible:bg-slate-100"
+              title="Print a summary"
+            >
+              <i className="fas fa-print text-sm text-slate-400 transition-transform duration-200 group-hover:scale-125"></i>
+              <span className="text-[11px] sm:text-xs font-bold group-hover:text-slate-900">Print</span>
             </button>
           </div>
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="hidden sm:flex sm:w-auto lg:w-full bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 lg:px-4 lg:py-2.5 rounded-2xl items-center justify-center gap-2 shadow-lg shadow-emerald-200 transition-all hover:-translate-y-1 active:scale-95 text-sm font-bold"
-          >
-            <i className="fas fa-file-csv text-xs"></i> Import CSV
-          </button>
-          <button
-            onClick={() => setShowSummaryModal(true)}
-            className="hidden sm:flex sm:w-auto lg:w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-5 py-3 lg:px-4 lg:py-2.5 rounded-2xl items-center justify-center gap-2 transition-all text-sm font-bold"
-          >
-            <i className="fas fa-print text-xs text-slate-400"></i> Print Summary
-          </button>
         </div>
       </div>
 
@@ -606,6 +573,16 @@ const Transactions: React.FC = () => {
         onClose={() => setShowScanModal(false)}
         onScanComplete={handleScanComplete}
       />
+
+      {scanReview && (
+        <ScanReviewModal
+          data={scanReview.data}
+          imageUrl={scanReview.imageUrl}
+          fileName={scanReview.fileName}
+          onClose={() => setScanReview(null)}
+          onSaved={(msg) => { setScanReview(null); showReceiptToast(msg); fetchData(); }}
+        />
+      )}
 
       {issueReceiptTxs && issueReceiptTxs.length > 0 && (
         <IssueReceiptModal
