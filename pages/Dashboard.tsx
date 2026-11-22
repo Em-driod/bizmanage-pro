@@ -5,6 +5,8 @@ import { useCurrency } from '../context/CurrencyContext';
 import { useSocket } from '../context/SocketContext';
 import { useNavigate } from 'react-router-dom';
 import ScanTransactionModal from '../components/ScanTransactionModal';
+import ScanReviewModal from '../components/ScanReviewModal';
+import { ScanResponse } from '../types';
 import AdvisorPanel, { AdvisorData } from '../components/AdvisorPanel';
 
 import OnboardingChecklist from '../components/OnboardingChecklist';
@@ -491,25 +493,15 @@ const Dashboard: React.FC = () => {
     return () => window.removeEventListener('MorniyDataUpdate', handleDataUpdate);
   }, [filter]);
 
-  const handleScanComplete = async (data: { transactions?: unknown[]; text?: string }) => {
+  const [scanReview, setScanReview] = useState<{ data: ScanResponse; imageUrl: string | null; fileName: string } | null>(null);
+
+  // Nothing is saved until the user has checked the extracted figures against the photo.
+  const handleScanComplete = (data: ScanResponse, imageUrl: string | null, fileName: string) => {
     setIsScanModalOpen(false);
-    try {
-      if (data.transactions && data.transactions.length > 0) {
-        await apiRequest('/scanned-transactions', {
-          method: 'POST',
-          body: {
-            transactions: data.transactions,
-            text: data.text,
-            originalFileName: "Scanned Document"
-          },
-        });
-        // Instead of immediate navigation, show a success toast with a CTA
-        setShowScanSuccess(true);
-      } else {
-        alert("No transactions were found in the document.");
-      }
-    } catch (err: any) {
-      alert('Error saving scan: ' + err.message);
+    if (data.transactions && data.transactions.length > 0) {
+      setScanReview({ data, imageUrl, fileName });
+    } else {
+      alert('No transactions were found in the document.');
     }
   };
 
@@ -599,7 +591,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-800">Document scanned successfully</p>
-              <p className="text-xs text-slate-400">Your receipt has been saved and is ready to review.</p>
+              <p className="text-xs text-slate-400">Your receipt has been saved.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -724,6 +716,19 @@ const Dashboard: React.FC = () => {
         onClose={() => setIsScanModalOpen(false)}
         onScanComplete={handleScanComplete}
       />
+      {scanReview && (
+        <ScanReviewModal
+          data={scanReview.data}
+          imageUrl={scanReview.imageUrl}
+          fileName={scanReview.fileName}
+          onClose={() => setScanReview(null)}
+          onSaved={() => {
+            setScanReview(null);
+            setShowScanSuccess(true);
+            window.dispatchEvent(new Event('MorniyDataUpdate'));
+          }}
+        />
+      )}
     </div>
   );
 };

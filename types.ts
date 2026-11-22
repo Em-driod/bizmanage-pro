@@ -82,6 +82,14 @@ export interface ParsedScanItem {
 export interface ScanResponse {
   text: string;
   transactions: ParsedScanItem[];
+  vendorName?: string | null;
+  documentDate?: string | null;
+  /** 0-100 OCR confidence (100 for PDFs with a real text layer). */
+  confidence?: number;
+  lowConfidence?: boolean;
+  warnings?: string[];
+  /** Other amounts that different readings of the photo produced. */
+  alternativeAmounts?: number[];
 }
 
 export interface ScannedInvoiceLineItem {
